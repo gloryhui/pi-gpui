@@ -86,9 +86,9 @@ impl PromptForm {
                 required: question["required"].as_bool().unwrap_or(true),
                 placeholder: text(&question["placeholder"]).unwrap_or_else(|| {
                     if options.is_empty() {
-                        "Type your answer".into()
+                        "输入你的回答".into()
                     } else {
-                        "Other".into()
+                        "其他".into()
                     }
                 }),
                 options,
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(database.options[0].description, Some("Relational".into()));
         assert_eq!(database.options[1].label, "SQLite");
         assert!(database.allow_text && database.required && !database.multiple);
-        assert_eq!(database.placeholder, "Other");
+        assert_eq!(database.placeholder, "其他");
 
         let features = &form.questions[1];
         assert_eq!(features.id, "1");
@@ -205,7 +205,7 @@ mod tests {
         // No options: answered with text, and never a multiple choice.
         let other = &form.questions[2];
         assert!(other.allow_text && !other.multiple);
-        assert_eq!(other.placeholder, "Type your answer");
+        assert_eq!(other.placeholder, "输入你的回答");
     }
 
     #[test]

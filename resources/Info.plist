@@ -5,11 +5,13 @@
 	<key>CFBundleExecutable</key>
 	<string>pi-gpui</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.pi-gpui.app</string>
+	<string>dev.pi-gpui.zh</string>
 	<key>CFBundleName</key>
-	<string>Pi GPUI</string>
+	<string>Pi GPUI 中文版</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pi GPUI</string>
+	<string>Pi GPUI 中文版</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh-Hans</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
@@ -22,22 +24,22 @@
 	<string>13.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
-	<!-- pi-gpui://open?workspace=...&session=... (src/open_url.rs), used by `/gpui` in pi. -->
+	<!-- pi-gpui-zh://open?workspace=...&session=... (src/open_url.rs). -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>dev.pi-gpui.app</string>
+			<string>dev.pi-gpui.zh</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>pi-gpui</string>
+				<string>pi-gpui-zh</string>
 			</array>
 		</dict>
 	</array>
 	<!-- macOS checks these in the app that launched a plugin, not in the plugin itself. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A plugin wants to use the microphone, for example to dictate a message.</string>
+	<string>插件需要使用麦克风，例如通过语音输入消息。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>A plugin wants to recognize speech, for example to dictate a message.</string>
+	<string>插件需要使用语音识别，例如将口述内容转成消息。</string>
 </dict>
 </plist>

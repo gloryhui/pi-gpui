@@ -418,16 +418,15 @@ impl HubView {
                 if let Some(result) = result {
                     let current = updater.read(cx).current_version();
                     this.notice = match result {
-                        UpdateStatus::UpToDate | UpdateStatus::Idle => Some((
-                            format!("Pi GPUI {current} is up to date."),
-                            Color::Default,
-                        )),
+                        UpdateStatus::UpToDate | UpdateStatus::Idle => {
+                            Some((format!("Pi GPUI {current} 已是最新版本。"), Color::Default))
+                        }
                         UpdateStatus::Ready(version) => Some((
-                            format!("Pi GPUI {version} is ready: use \"Restart to update\" in the title bar."),
+                            format!("Pi GPUI {version} 已下载，可在标题栏选择「重启并更新」。"),
                             Color::Default,
                         )),
                         UpdateStatus::Failed(error) => {
-                            Some((format!("Update failed: {error}"), Color::Warning))
+                            Some((format!("更新失败：{error}"), Color::Warning))
                         }
                         UpdateStatus::Checking | UpdateStatus::Downloading(_) => None,
                     };
@@ -541,7 +540,7 @@ impl HubView {
         if let Some(previous) = updated_from {
             this.notice = Some((
                 format!(
-                    "Updated to Pi GPUI {} (from {previous}).",
+                    "已从 {previous} 更新到 Pi GPUI {}。",
                     env!("CARGO_PKG_VERSION")
                 ),
                 Color::Default,
@@ -563,9 +562,9 @@ impl HubView {
         }
         let answer = window.prompt(
             gpui::PromptLevel::Warning,
-            "pi is still working. Restart anyway?",
-            Some("Running work stops; the sessions themselves are saved."),
-            &["Restart", "Cancel"],
+            "Pi 仍在运行，是否重启？",
+            Some("当前任务会停止。会话记录会保留。"),
+            &["重启", "取消"],
             cx,
         );
         cx.spawn(async move |_, cx| {
@@ -601,14 +600,14 @@ impl HubView {
             return;
         }
         let question = match running {
-            1 => "pi is working in a session. Reload anyway?".to_string(),
-            count => format!("pi is working in {count} sessions. Reload anyway?"),
+            1 => "有一个会话正在运行，是否重新加载？".to_string(),
+            count => format!("有 {count} 个会话正在运行，是否重新加载？"),
         };
         let answer = window.prompt(
             gpui::PromptLevel::Warning,
             &question,
-            Some("Running work stops; the sessions themselves are saved."),
-            &["Reload", "Cancel"],
+            Some("当前任务会停止。会话记录会保留。"),
+            &["重新加载", "取消"],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -644,8 +643,8 @@ impl HubView {
                         }
                         this.notice = Some((
                             match chats.len() {
-                                1 => "Reloaded 1 session.".to_string(),
-                                count => format!("Reloaded {count} sessions."),
+                                1 => "已重新加载 1 个会话。".to_string(),
+                                count => format!("已重新加载 {count} 个会话。"),
                             },
                             Color::Default,
                         ));
@@ -687,8 +686,7 @@ impl HubView {
                     Some(chat) => chat.update(cx, |chat, cx| chat.apply_plugin_edit(event, cx)),
                     None => {
                         self.notice = Some((
-                            "Open a session first: the plugin has nowhere to insert text."
-                                .to_string(),
+                            "请先打开会话，插件才能插入文字。".to_string(),
                             Color::Warning,
                         ));
                         cx.notify();
@@ -777,7 +775,7 @@ impl HubView {
             .filter(|path| path.is_dir())
         else {
             self.notice = Some((
-                format!("Cannot open {url}: no such project folder."),
+                format!("无法打开 {url}：项目文件夹不存在。"),
                 Color::Warning,
             ));
             cx.notify();
@@ -815,14 +813,14 @@ impl HubView {
         // On macOS our own picker reuses one panel; gpui's builds a new one each
         // time and blocks the main thread while doing it.
         #[cfg(target_os = "macos")]
-        let picker = platform::pick_folders("Add");
+        let picker = platform::pick_folders("添加");
         #[cfg(not(target_os = "macos"))]
         let picker = {
             let paths = cx.prompt_for_paths(gpui::PathPromptOptions {
                 files: false,
                 directories: true,
                 multiple: true,
-                prompt: Some("Add".into()),
+                prompt: Some("添加".into()),
             });
             async move {
                 match paths.await {
@@ -844,10 +842,8 @@ impl HubView {
                     }
                     Ok(None) => {}
                     Err(error) => {
-                        this.notice = Some((
-                            format!("Could not open the folder picker: {error}"),
-                            Color::Warning,
-                        ));
+                        this.notice =
+                            Some((format!("无法打开文件夹选择器：{error}"), Color::Warning));
                     }
                 }
                 cx.notify();
@@ -867,7 +863,7 @@ impl HubView {
         if self.workspaces[index].has_running_chat(cx) {
             self.notice = Some((
                 format!(
-                    "Work is still running in \"{}\". Stop it before removing the project.",
+                    "「{}」还有任务在运行，请先停止任务再移除项目。",
                     self.workspaces[index].name
                 ),
                 Color::Warning,
@@ -961,7 +957,7 @@ impl HubView {
         match workspace {
             Some(workspace) => self.start_chat(&workspace, None, cx),
             None => {
-                self.notice = Some(("Add a project first.".to_string(), Color::Warning));
+                self.notice = Some(("请先添加项目。".to_string(), Color::Warning));
                 cx.notify();
             }
         }
@@ -996,7 +992,7 @@ impl HubView {
                 match holder {
                 Some(holder) => {
                     this.notice = Some((format!(
-                        "This session is open in {holder}. Close it there first: pi does not protect a session file from two writers."
+                        "此会话正在 {holder} 中打开。请先关闭那里的会话，以免同时写入同一个文件。"
                     ), Color::Warning));
                     cx.notify();
                 }
@@ -1022,16 +1018,13 @@ impl HubView {
         let installation = match &self.installation {
             InstallationState::Ready(installation) => installation.clone(),
             InstallationState::Checking => {
-                self.notice = Some((
-                    "pi is still being checked, try again in a moment.".to_string(),
-                    Color::Warning,
-                ));
+                self.notice = Some(("正在检查 Pi，请稍后再试。".to_string(), Color::Warning));
                 cx.notify();
                 return None;
             }
             InstallationState::Failed(_) => {
                 self.notice = Some((
-                    "pi is not ready: see the steps in the main area.".to_string(),
+                    "Pi 尚未就绪，请查看主区域的提示。".to_string(),
                     Color::Warning,
                 ));
                 cx.notify();
@@ -1581,10 +1574,7 @@ impl HubView {
             if let Err(error) = write.await {
                 eprintln!("pi-gpui: saving workspaces failed: {error}");
                 this.update(cx, |this, cx| {
-                    this.notice = Some((
-                        format!("Could not save the project list: {error}"),
-                        Color::Warning,
-                    ));
+                    this.notice = Some((format!("无法保存项目列表：{error}"), Color::Warning));
                     cx.notify();
                 })
                 .ok();
@@ -1731,7 +1721,7 @@ impl HubView {
                     IconButton::new("close-all-tabs", IconName::CloseAll)
                         .size(ButtonSize::Compact)
                         .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Close all sessions"))
+                        .tooltip(Tooltip::text("关闭所有会话"))
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.confirm_close_all(window, cx);
                         })),
@@ -1854,7 +1844,7 @@ impl HubView {
                         .size(ButtonSize::Compact)
                         .icon_size(IconSize::XSmall)
                         .tooltip(Tooltip::with_optional_keys(
-                            "Close session",
+                            "关闭会话",
                             is_active.then(|| "⌘W".into()),
                         ))
                         .on_click(cx.listener({
@@ -1984,7 +1974,7 @@ impl HubView {
             };
         let actions = (active == Some(PanelKind::Sessions)).then(|| {
             IconButton::new("add-workspace", IconName::Plus)
-                .tooltip(Tooltip::with_keys("Add project", "⌘O"))
+                .tooltip(Tooltip::with_keys("添加项目", "⌘O"))
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.prompt_add_workspace(&AddWorkspace, window, cx)
                 }))
@@ -2039,14 +2029,14 @@ impl HubView {
                 .child(Label::new(label).size(LabelSize::Small))
         };
         let move_item = match target {
-            DockSide::Left => item("menu-move-panel", IconName::PanelLeft, "Move to the left"),
-            DockSide::Right => item("menu-move-panel", IconName::PanelRight, "Move to the right"),
+            DockSide::Left => item("menu-move-panel", IconName::PanelLeft, "移到左侧"),
+            DockSide::Right => item("menu-move-panel", IconName::PanelRight, "移到右侧"),
         }
         .on_click(cx.listener(move |this, _, _, cx| {
             this.panel_menu = None;
             this.move_panel(kind, target, cx);
         }));
-        let hide = item("menu-hide-panel", IconName::Close, "Hide panel").on_click(cx.listener(
+        let hide = item("menu-hide-panel", IconName::Close, "隐藏面板").on_click(cx.listener(
             move |this, _, _, cx| {
                 this.panel_menu = None;
                 let side = this.docks.side_of(kind);
@@ -2096,27 +2086,26 @@ impl HubView {
                 )
                 .children(keys.map(KeyHint::new))
         };
-        let settings = item("app-menu-settings", "Settings", Some("⌘,")).on_click(cx.listener(
+        let settings = item("app-menu-settings", "设置", Some("⌘,")).on_click(cx.listener(
             |this, _, window, cx| {
                 this.app_menu = None;
                 this.open_settings(&OpenSettings, window, cx);
             },
         ));
-        let updates = item("app-menu-updates", "Check for Updates", None).on_click(cx.listener(
-            |this, _, _, cx| {
+        let updates =
+            item("app-menu-updates", "检查更新", None).on_click(cx.listener(|this, _, _, cx| {
                 this.app_menu = None;
                 AutoUpdater::global(cx).update(cx, |updater, cx| updater.check(true, cx));
                 cx.notify();
-            },
-        ));
-        let about = item("app-menu-about", "About Pi GPUI", None).on_click(cx.listener(
+            }));
+        let about = item("app-menu-about", "关于 Pi GPUI 中文版", None).on_click(cx.listener(
             |this, _, _, cx| {
                 this.app_menu = None;
                 cx.open_url("https://github.com/bytesbay/pi-gpui");
                 cx.notify();
             },
         ));
-        let quit = item("app-menu-quit", "Quit", Some("⌘Q")).on_click(|_, _, cx| cx.quit());
+        let quit = item("app-menu-quit", "退出", Some("⌘Q")).on_click(|_, _, cx| cx.quit());
         deferred(
             anchored()
                 .position(position)
@@ -2275,7 +2264,7 @@ impl HubView {
                 IconButton::new(("new-chat", index), IconName::Plus)
                     .size(ButtonSize::Compact)
                     .icon_size(IconSize::XSmall)
-                    .tooltip(Tooltip::with_keys("New session", "⌘N"))
+                    .tooltip(Tooltip::with_keys("新建会话", "⌘N"))
                     .on_click(cx.listener({
                         let path = path.clone();
                         move |this, _, _, cx| this.start_chat(&path, None, cx)
@@ -2287,9 +2276,9 @@ impl HubView {
                     .icon_size(IconSize::XSmall)
                     .disabled(running)
                     .tooltip(Tooltip::text(if running {
-                        "Work is running: stop it first"
+                        "任务正在运行，请先停止"
                     } else {
-                        "Remove from list"
+                        "从列表移除"
                     }))
                     .on_click(cx.listener({
                         let path = path.clone();
@@ -2335,11 +2324,11 @@ impl HubView {
             }
             if hidden_count > 0 {
                 let label = if show_hidden {
-                    "Hide hidden sessions".to_string()
+                    "收起隐藏会话".to_string()
                 } else if hidden_count == 1 {
-                    "1 hidden session".to_string()
+                    "1 个隐藏会话".to_string()
                 } else {
-                    format!("{hidden_count} hidden sessions")
+                    format!("{hidden_count} 个隐藏会话")
                 };
                 rows.push(
                     ListItem::new(("show-hidden", index))
@@ -2375,14 +2364,14 @@ impl HubView {
             if rows.is_empty() {
                 let placeholder = match entry.sessions_state {
                     SessionsState::Loaded => h_flex().child(
-                        Label::new("No sessions yet")
+                        Label::new("暂无会话")
                             .size(LabelSize::Small)
                             .color(Color::Placeholder),
                     ),
                     SessionsState::Loading | SessionsState::NotLoaded => h_flex()
                         .gap(px(6.))
                         .child(Spinner::new().size(IconSize::XSmall))
-                        .child(LoadingLabel::new("Loading sessions…").size(LabelSize::Small)),
+                        .child(LoadingLabel::new("正在加载会话…").size(LabelSize::Small)),
                 };
                 rows.push(
                     div()
@@ -2563,7 +2552,7 @@ impl HubView {
         )
         .size(ButtonSize::Compact)
         .icon_size(IconSize::XSmall)
-        .tooltip(Tooltip::text("More"))
+        .tooltip(Tooltip::text("更多"))
         .on_click(cx.listener({
             let row = row.clone();
             move |this, _, window, cx| {
@@ -2586,7 +2575,7 @@ impl HubView {
             )
             .size(ButtonSize::Compact)
             .icon_size(IconSize::XSmall)
-            .tooltip(Tooltip::text(if hidden { "Show" } else { "Hide" }))
+            .tooltip(Tooltip::text(if hidden { "显示" } else { "隐藏" }))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.toggle_hidden(file.clone(), cx);
             }))
@@ -2599,7 +2588,7 @@ impl HubView {
             .size(ButtonSize::Compact)
             .icon_size(IconSize::XSmall)
             .tooltip(Tooltip::with_optional_keys(
-                "Close session",
+                "关闭会话",
                 is_active.then(|| "⌘W".into()),
             ))
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -2616,7 +2605,7 @@ impl HubView {
             .size(ButtonSize::Compact)
             .icon_size(IconSize::XSmall)
             .icon_color(Color::Error)
-            .tooltip(Tooltip::text("Move to Trash"))
+            .tooltip(Tooltip::text("移到废纸篓"))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.delete_session(row.clone(), cx);
             }))
@@ -2678,7 +2667,7 @@ impl HubView {
         let rename = item(
             "menu-rename",
             IconName::Pencil,
-            "Rename",
+            "重命名",
             Color::Default,
             true,
         )
@@ -2698,9 +2687,9 @@ impl HubView {
                 IconName::EyeOff
             },
             if hidden {
-                "Show session"
+                "显示会话"
             } else {
-                "Hide session"
+                "隐藏会话"
             },
             Color::Default,
             has_file,
@@ -2718,7 +2707,7 @@ impl HubView {
             item(
                 "menu-close",
                 IconName::Close,
-                "Close session",
+                "关闭会话",
                 Color::Default,
                 true,
             )
@@ -2730,7 +2719,7 @@ impl HubView {
         let delete = item(
             "menu-delete",
             IconName::Trash,
-            "Delete…",
+            "删除…",
             Color::Error,
             has_file && !running,
         )
@@ -2771,7 +2760,7 @@ impl HubView {
 
     fn start_rename(&mut self, row: SessionRow, window: &mut Window, cx: &mut Context<Self>) {
         let input = cx.new(|cx| {
-            let mut input = TextInput::single_line("Session name", cx);
+            let mut input = TextInput::single_line("会话名称", cx);
             input.set_text(row.title.clone(), cx);
             input
         });
@@ -2810,10 +2799,7 @@ impl HubView {
             return;
         };
         let InstallationState::Ready(installation) = &self.installation else {
-            self.notice = Some((
-                "pi is not ready yet; try again in a moment.".to_string(),
-                Color::Warning,
-            ));
+            self.notice = Some(("Pi 尚未就绪，请稍后重试。".to_string(), Color::Warning));
             return;
         };
         let installation = installation.clone();
@@ -2825,7 +2811,7 @@ impl HubView {
             async move {
                 if let Some(holder) = sessions::foreign_lease_holder(&file) {
                     return Err(format!(
-                        "This session is open in {holder}. Rename it there or close it first."
+                        "此会话正在 {holder} 中打开。请在那里重命名，或先关闭该会话。"
                     ));
                 }
                 pi::rename_session(installation, workspace, file, name).await
@@ -2836,10 +2822,7 @@ impl HubView {
             this.update(cx, |this, cx| {
                 this.renaming_sessions.remove(&file);
                 if let Err(error) = result {
-                    this.notice = Some((
-                        format!("Could not rename the session: {error}"),
-                        Color::Warning,
-                    ));
+                    this.notice = Some((format!("无法重命名会话：{error}"), Color::Warning));
                 }
                 this.load_sessions(&workspace, cx);
                 cx.notify();
@@ -2878,14 +2861,14 @@ impl HubView {
             return;
         }
         let question = match running {
-            1 => "pi is working in a session. Close all anyway?".to_string(),
-            count => format!("pi is working in {count} sessions. Close all anyway?"),
+            1 => "有一个会话正在运行，是否关闭全部会话？".to_string(),
+            count => format!("有 {count} 个会话正在运行，是否关闭全部会话？"),
         };
         let answer = window.prompt(
             gpui::PromptLevel::Warning,
             &question,
-            Some("Closing stops the runs. The sessions themselves are kept."),
-            &["Close All", "Cancel"],
+            Some("关闭会停止当前任务。会话记录会保留。"),
+            &["全部关闭", "取消"],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -2915,9 +2898,12 @@ impl HubView {
         }
         let answer = window.prompt(
             gpui::PromptLevel::Warning,
-            &format!("Close \"{}\"?", sessions::one_line(&view.read(cx).title(), 60)),
-            Some("pi is still working in this session. Closing it stops the run. The session itself is kept."),
-            &["Close", "Cancel"],
+            &format!(
+                "关闭「{}」？",
+                sessions::one_line(&view.read(cx).title(), 60)
+            ),
+            Some("此会话仍在运行。关闭会停止当前任务，并保留会话记录。"),
+            &["关闭", "取消"],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -2977,9 +2963,9 @@ impl HubView {
         }
         let answer = window.prompt(
             gpui::PromptLevel::Warning,
-            &format!("Delete \"{}\"?", sessions::one_line(&row.title, 60)),
-            Some("The session file moves to the Trash, so it can still be restored from there."),
-            &["Delete", "Cancel"],
+            &format!("删除「{}」？", sessions::one_line(&row.title, 60)),
+            Some("会话文件会移到废纸篓，可从中恢复。"),
+            &["删除", "取消"],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -2998,7 +2984,7 @@ impl HubView {
         };
         if let Some(holder) = sessions::foreign_lease_holder(&file) {
             self.notice = Some((
-                format!("This session is open in {holder}. Close it there first."),
+                format!("此会话正在 {holder} 中打开，请先关闭那里的会话。"),
                 Color::Warning,
             ));
             cx.notify();
@@ -3019,10 +3005,7 @@ impl HubView {
                 self.save(cx);
             }
             Err(error) => {
-                self.notice = Some((
-                    format!("Could not delete the session: {error}"),
-                    Color::Warning,
-                ));
+                self.notice = Some((format!("无法删除会话：{error}"), Color::Warning));
             }
         }
         self.load_sessions(&row.workspace, cx);
@@ -3043,7 +3026,7 @@ impl HubView {
                 h_flex()
                     .gap(px(6.))
                     .child(Spinner::new().size(IconSize::XSmall))
-                    .child(LoadingLabel::new("Checking pi…").size(LabelSize::Small)),
+                    .child(LoadingLabel::new("正在检查 Pi…").size(LabelSize::Small)),
             ),
             InstallationState::Ready(installation) => {
                 let untested = installation.is_untested();
@@ -3058,21 +3041,21 @@ impl HubView {
             }
             InstallationState::Failed(error) => {
                 let (color, label) = match error {
-                    pi::CheckError::NotFound => (Color::Error, "pi not installed".to_string()),
+                    pi::CheckError::NotFound => (Color::Error, "未安装 Pi".to_string()),
                     pi::CheckError::VersionUnreadable { .. } => {
-                        (Color::Error, "pi did not start".to_string())
+                        (Color::Error, "Pi 启动失败".to_string())
                     }
                     pi::CheckError::Unsupported { installation }
                         if installation.version < pi::MIN_PI =>
                     {
                         (
                             Color::Warning,
-                            format!("pi {} · update needed", installation.version),
+                            format!("Pi {} · 需要更新", installation.version),
                         )
                     }
                     pi::CheckError::Unsupported { installation } => (
                         Color::Accent,
-                        format!("pi {} · not supported yet", installation.version),
+                        format!("Pi {} · 暂不支持", installation.version),
                     ),
                 };
                 footer.child(
@@ -3093,15 +3076,15 @@ impl HubView {
             pi::CheckError::NotFound => (
                 IconName::Terminal,
                 Color::Muted,
-                "Install pi to get started".to_string(),
-                "Pi GPUI is a window for the pi coding agent. Install pi once; your models, extensions and sessions are shared with the terminal.".to_string(),
+                "安装 Pi 后即可开始".to_string(),
+                "Pi GPUI 与命令行 Pi 共用模型、扩展和会话。安装一次 Pi 即可使用。".to_string(),
             ),
             pi::CheckError::Unsupported { installation } if installation.version < pi::MIN_PI => (
                 IconName::Warning,
                 Color::Warning,
-                "Update pi".to_string(),
+                "更新 Pi".to_string(),
                 format!(
-                    "pi {} is installed. This app needs pi {} or newer.",
+                    "已安装 Pi {}，此应用需要 Pi {} 或更高版本。",
                     installation.version,
                     pi::MIN_PI
                 ),
@@ -3109,9 +3092,12 @@ impl HubView {
             pi::CheckError::Unsupported { installation } => (
                 IconName::Refresh,
                 Color::Accent,
-                format!("pi {}.{} is newer than this app", installation.version.major, installation.version.minor),
                 format!(
-                    "This version of Pi GPUI supports pi {}.x. A newer app version may support pi {}.",
+                    "Pi {}.{} 高于此应用支持的版本",
+                    installation.version.major, installation.version.minor
+                ),
+                format!(
+                    "此版 Pi GPUI 支持 Pi {}.x。更新应用后可能支持 Pi {}。",
                     pi::MIN_PI.major,
                     installation.version.major
                 ),
@@ -3119,8 +3105,8 @@ impl HubView {
             pi::CheckError::VersionUnreadable { .. } => (
                 IconName::Warning,
                 Color::Error,
-                "Could not start pi".to_string(),
-                "pi was found, but `pi --version` did not answer.".to_string(),
+                "无法启动 Pi".to_string(),
+                "已找到 Pi，但 `pi --version` 未返回版本信息。".to_string(),
             ),
         };
 
@@ -3159,7 +3145,7 @@ impl HubView {
                                 .text_ellipsis()
                                 .child(command),
                         )
-                        .child(Button::new(id, "Copy").style(ButtonStyle::Filled).on_click(
+                        .child(Button::new(id, "复制").style(ButtonStyle::Filled).on_click(
                             move |_, _, cx| {
                                 cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))
                             },
@@ -3173,7 +3159,7 @@ impl HubView {
                 .color(Color::Placeholder)
                 .into_any_element()
         };
-        let check_again = Button::new("setup-check-again", "Check again")
+        let check_again = Button::new("setup-check-again", "重新检查")
             .icon(IconName::Refresh)
             .style(ButtonStyle::Tinted(TintColor::Accent))
             .on_click(cx.listener(|this, _, _, cx| this.check_installation(cx)));
@@ -3184,9 +3170,7 @@ impl HubView {
                     .size(IconSize::XSmall)
                     .color(Color::Placeholder),
             )
-            .child(hint(
-                "Also checks again when you return to the app".to_string(),
-            ));
+            .child(hint("返回应用时也会重新检查".to_string()));
 
         let mut body: Vec<AnyElement> = Vec::new();
         let mut actions = h_flex().gap(px(12.)).mt(px(8.));
@@ -3195,39 +3179,39 @@ impl HubView {
             pi::CheckError::NotFound => {
                 body.push(command(
                     "copy-installer",
-                    "Installer",
+                    "安装脚本",
                     "curl -fsSL https://pi.dev/install.sh | sh".to_string(),
                 ));
                 body.push(command(
                     "copy-npm",
-                    "Or with npm (Node.js 22.19+)",
+                    "也可使用 npm（需 Node.js 22.19 或更高版本）",
                     "npm install -g --ignore-scripts @earendil-works/pi-coding-agent".to_string(),
                 ));
                 actions = actions.child(check_again).child(
-                    Button::new("setup-docs", "pi documentation")
+                    Button::new("setup-docs", "Pi 文档")
                         .on_click(|_, _, cx| cx.open_url("https://pi.dev")),
                 );
                 details = Some(
-                    "Installed somewhere unusual? Set PI_EXECUTABLE to its path and reopen the app."
+                    "如果 Pi 装在自定义位置，请将 PI_EXECUTABLE 设为可执行文件路径，再重新打开应用。"
                         .to_string(),
                 );
             }
             pi::CheckError::Unsupported { installation } if installation.version < pi::MIN_PI => {
                 body.push(command(
                     "copy-update",
-                    "Run in a terminal",
+                    "在终端中运行",
                     "pi update".to_string(),
                 ));
                 body.push(hint(
-                    "Installed with npm? Run the npm install command again instead.".to_string(),
+                    "如果之前通过 npm 安装，请重新运行 npm 安装命令。".to_string(),
                 ));
                 actions = actions.child(check_again);
-                details = Some(format!("Found {}", installation.executable.display()));
+                details = Some(format!("已找到 {}", installation.executable.display()));
             }
             pi::CheckError::Unsupported { installation } => {
                 actions = actions
                     .child(
-                        Button::new("setup-app-update", "Check for Updates")
+                        Button::new("setup-app-update", "检查更新")
                             .icon(IconName::Refresh)
                             .style(ButtonStyle::Tinted(TintColor::Accent))
                             .on_click(|_, _, cx| {
@@ -3236,11 +3220,11 @@ impl HubView {
                             }),
                     )
                     .child(
-                        Button::new("setup-check-pi", "Check pi again")
+                        Button::new("setup-check-pi", "重新检查 Pi")
                             .on_click(cx.listener(|this, _, _, cx| this.check_installation(cx))),
                     );
                 details = Some(format!(
-                    "Found pi {} at {}",
+                    "已找到 Pi {}，路径为 {}",
                     installation.version,
                     installation.executable.display()
                 ));
@@ -3249,12 +3233,12 @@ impl HubView {
                 executable,
                 details: error,
             } => {
-                body.push(command("copy-error", "Error", error.clone()));
+                body.push(command("copy-error", "错误", error.clone()));
                 body.push(hint(
-                    "pi needs Node.js 22.19 or newer on the same PATH.".to_string(),
+                    "Pi 需要 Node.js 22.19 或更高版本，并能通过同一 PATH 找到它。".to_string(),
                 ));
                 actions = actions.child(check_again);
-                details = Some(format!("Found {}", executable.display()));
+                details = Some(format!("已找到 {}", executable.display()));
             }
         }
         let shows_auto_check = !matches!(
@@ -3397,7 +3381,7 @@ impl HubView {
                 let saved = setting.text(&current);
                 input.update(cx, |input, cx| input.set_text(saved, cx));
                 self.notice = Some((
-                    format!("\"{text}\" does not fit {}.", setting.title),
+                    format!("「{text}」不是「{}」的有效值。", setting.title),
                     Color::Warning,
                 ));
                 cx.notify();
@@ -3474,7 +3458,7 @@ impl HubView {
         };
 
         let theme_options = [
-            (settings::THEME_SYSTEM, "System"),
+            (settings::THEME_SYSTEM, "跟随系统"),
             (settings::THEME_LIGHT, "Ayu Light"),
             (settings::THEME_DARK, "Ayu Dark"),
         ];
@@ -3531,7 +3515,7 @@ impl HubView {
                 user_themes
                     .errors
                     .iter()
-                    .map(|error| format!("Theme not loaded: {error}")),
+                    .map(|error| format!("主题未加载：{error}")),
             )
             .collect();
         let custom_chips = (!theme_names.is_empty()).then(|| {
@@ -3583,7 +3567,7 @@ impl HubView {
             .gap(px(6.))
             .children(custom_chips)
             .child(
-                Button::new("new-theme", "New theme")
+                Button::new("new-theme", "新建主题")
                     .icon(IconName::Plus)
                     .on_click(
                         cx.listener(|this, _, _, cx| match settings::create_theme_file() {
@@ -3592,10 +3576,8 @@ impl HubView {
                                 open_in_editor(&path);
                             }
                             Err(error) => {
-                                this.notice = Some((
-                                    format!("Could not create a theme: {error}"),
-                                    Color::Warning,
-                                ));
+                                this.notice =
+                                    Some((format!("无法创建主题：{error}"), Color::Warning));
                                 cx.notify();
                             }
                         }),
@@ -3603,7 +3585,7 @@ impl HubView {
             )
             .child(
                 IconButton::new("open-themes-folder", IconName::FolderOpen)
-                    .tooltip(Tooltip::text("Open the themes folder"))
+                    .tooltip(Tooltip::text("打开主题文件夹"))
                     .on_click(move |_, _, _| {
                         std::fs::create_dir_all(&themes_directory).ok();
                         platform::reveal_in_file_manager(&themes_directory);
@@ -3646,7 +3628,7 @@ impl HubView {
                         ElementId::Name(format!("{key}-down").into()),
                         IconName::Dash,
                     )
-                    .tooltip(Tooltip::text("Smaller"))
+                    .tooltip(Tooltip::text("缩小字号"))
                     .on_click(step(-1.)),
                 )
                 .child(
@@ -3658,7 +3640,7 @@ impl HubView {
                 )
                 .child(
                     IconButton::new(ElementId::Name(format!("{key}-up").into()), IconName::Plus)
-                        .tooltip(Tooltip::text("Larger"))
+                        .tooltip(Tooltip::text("增大字号"))
                         .on_click(step(1.)),
                 )
                 .into_any_element()
@@ -3709,18 +3691,18 @@ impl HubView {
                             .text_size(px(20.))
                             .line_height(px(28.))
                             .font_weight(FontWeight::SEMIBOLD)
-                            .child("Settings"),
+                            .child("设置"),
                     )
                     .child(
                         Label::new(format!(
-                            "Saved in {path_label}. The file is the source of truth: edit it by hand or let an agent change it, and the app applies it on save."
+                            "保存在 {path_label}。你可以手动编辑或让助手修改，保存后立即生效。"
                         ))
                         .size(LabelSize::Small)
                         .color(Color::Muted),
                     ),
             )
             .child(
-                Button::new("open-settings-file", "Open settings.json")
+                Button::new("open-settings-file", "打开 settings.json")
                     .icon(IconName::File)
                     .style(ButtonStyle::Filled)
                     .on_click({
@@ -3730,7 +3712,7 @@ impl HubView {
             )
             .child(
                 IconButton::new("close-settings", IconName::Close)
-                    .tooltip(Tooltip::text("Close settings"))
+                    .tooltip(Tooltip::text("关闭设置"))
                     .on_click(cx.listener(|this, _, _, cx| this.close_settings(cx))),
             );
 
@@ -3742,10 +3724,14 @@ impl HubView {
                 .py(px(8.))
                 .rounded(px(6.))
                 .bg(colors.error_background)
-                .child(Icon::new(IconName::Warning).size(IconSize::XSmall).color(Color::Error))
+                .child(
+                    Icon::new(IconName::Warning)
+                        .size(IconSize::XSmall)
+                        .color(Color::Error),
+                )
                 .child(
                     Label::new(format!(
-                        "settings.json could not be read, the previous settings stay in effect: {error}"
+                        "无法读取 settings.json，继续使用上次的设置：{error}"
                     ))
                     .size(LabelSize::Small),
                 )
@@ -3766,40 +3752,40 @@ impl HubView {
                     .py(px(28.))
                     .child(header)
                     .children(error_banner)
-                    .child(group("Appearance".into()))
+                    .child(group("外观".into()))
                     .child(row(
-                        "Theme".into(),
-                        "System follows the system light or dark mode and switches between the two Ayu themes.".into(),
+                        "主题".into(),
+                        "跟随系统浅色或深色模式，自动切换 Ayu 主题。".into(),
                         theme_control,
                     ))
                     .child(row(
-                        "Your themes".into(),
+                        "自定义主题".into(),
                         format!(
-                            "JSON files in {themes_label}. Six colors are enough; Zed themes work too. Edits apply on save."
+                            "主题是 {themes_label} 中的 JSON 文件。最少可定义六种颜色，也支持 Zed 主题。保存后立即生效。"
                         )
                         .into(),
                         custom_control,
                     ))
                     .children(theme_banner)
-                    .child(group("Fonts".into()))
+                    .child(group("字体".into()))
                     .child(row(
-                        "Interface font".into(),
-                        "Font family of the whole interface. \".SystemUIFont\" is the system font.".into(),
+                        "界面字体".into(),
+                        "整个界面使用的字体。「.SystemUIFont」表示系统字体。".into(),
                         field("ui_font_family", &page.ui_font, cx),
                     ))
                     .child(row(
-                        "Message size".into(),
-                        "Text size of your messages and the agent's answers.".into(),
+                        "消息字号".into(),
+                        "你的消息和助手回复使用的字号。".into(),
                         stepper("agent_font_size", current.agent_font_size, cx),
                     ))
                     .child(row(
-                        "Code font".into(),
-                        "Font family of code blocks, tool output and inline code.".into(),
+                        "代码字体".into(),
+                        "代码块、工具输出和行内代码使用的字体。".into(),
                         field("buffer_font_family", &page.code_font, cx),
                     ))
                     .child(row(
-                        "Code size".into(),
-                        "Text size of code blocks and tool output.".into(),
+                        "代码字号".into(),
+                        "代码块和工具输出使用的字号。".into(),
                         stepper("buffer_font_size", current.buffer_font_size, cx),
                     ))
                     .children(plugin_rows),
@@ -3981,9 +3967,7 @@ impl HubView {
                 this.pi_updating = None;
                 let open_sessions = this.workspaces.iter().any(|entry| !entry.chats.is_empty());
                 let reopen = if open_sessions {
-                    crate::keys::in_text(
-                        " Open sessions keep the previous version until you reload them (⌘⇧R).",
-                    )
+                    crate::keys::in_text(" 已打开的会话会继续使用旧版，按 ⌘⇧R 重新加载后生效。")
                 } else {
                     String::new()
                 };
@@ -4000,8 +3984,8 @@ impl HubView {
                     }
                 }
                 this.notice = Some(match result {
-                    Ok(_) => (format!("{label}: done.{reopen}"), Color::Default),
-                    Err(error) => (format!("{label} failed: {error}"), Color::Warning),
+                    Ok(_) => (format!("{label}已完成。{reopen}"), Color::Default),
+                    Err(error) => (format!("{label}失败：{error}"), Color::Warning),
                 });
                 if updates_pi {
                     // The version gate runs again and then looks for updates.
@@ -4028,7 +4012,7 @@ impl HubView {
             }))
             .child(
                 Label::new(if untested {
-                    format!("pi {} · not tested yet", installation.version)
+                    format!("Pi {} · 尚未验证兼容性", installation.version)
                 } else {
                     format!("pi {}", installation.version)
                 })
@@ -4037,7 +4021,7 @@ impl HubView {
             )
             .when(untested, |this| {
                 this.tooltip(Tooltip::text(format!(
-                    "This app was tested with pi up to {}.{}.x. It should work; check for app updates.",
+                    "此应用已验证至 Pi {}.{}.x。若遇到问题，请检查应用更新。",
                     pi::TESTED_PI.major,
                     pi::TESTED_PI.minor
                 )))
@@ -4110,9 +4094,9 @@ impl HubView {
         let count = self.pi_updates.packages.len();
         if count > 0 {
             let text = if count == 1 {
-                "1 extension".to_string()
+                "1 个扩展".to_string()
             } else {
-                format!("{count} extensions")
+                format!("{count} 个扩展")
             };
             let element = chip(
                 "extension-updates",
@@ -4182,13 +4166,13 @@ impl HubView {
         };
         let (note, color, allowed) = match pi_updates::compatibility(latest) {
             pi_updates::PiCompatibility::Supported => (
-                "Works with this version of Pi GPUI.".to_string(),
+                "与此版本的 Pi GPUI 兼容。".to_string(),
                 Color::Success,
                 true,
             ),
             pi_updates::PiCompatibility::Untested => (
                 format!(
-                    "Not tested with this app yet (tested up to {}.{}.x). It should work; if something breaks, check for app updates.",
+                    "此应用已验证至 Pi {}.{}.x。若使用更新版本遇到问题，请检查应用更新。",
                     pi::TESTED_PI.major,
                     pi::TESTED_PI.minor
                 ),
@@ -4197,7 +4181,7 @@ impl HubView {
             ),
             pi_updates::PiCompatibility::NeedsAppUpdate => (
                 format!(
-                    "This app supports pi {}.x. Update Pi GPUI first, or wait for a version that supports pi {}.",
+                    "此应用支持 Pi {}.x。请更新 Pi GPUI，或等待支持 Pi {} 的版本。",
                     pi::MIN_PI.major,
                     latest.major
                 ),
@@ -4207,7 +4191,7 @@ impl HubView {
         };
         self.update_popover_frame(cx)
             .child(
-                Label::new("pi update")
+                Label::new("更新 Pi")
                     .size(LabelSize::Small)
                     .color(Color::Placeholder),
             )
@@ -4217,26 +4201,24 @@ impl HubView {
                 h_flex()
                     .gap(px(8.))
                     .child(
-                        Button::new("run-pi-update", "Update pi")
+                        Button::new("run-pi-update", "更新 Pi")
                             .style(ButtonStyle::Tinted(TintColor::Accent))
                             .disabled(!allowed)
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.run_pi_update(
-                                    format!("Updating pi to {latest}"),
+                                    format!("正在将 Pi 更新到 {latest}"),
                                     Vec::new(),
                                     cx,
                                 )
                             })),
                     )
                     .when(!allowed, |this| {
-                        this.child(
-                            Button::new("pi-update-app", "Check for app updates").on_click(
-                                |_, _, cx| {
-                                    AutoUpdater::global(cx)
-                                        .update(cx, |updater, cx| updater.check(true, cx))
-                                },
-                            ),
-                        )
+                        this.child(Button::new("pi-update-app", "检查应用更新").on_click(
+                            |_, _, cx| {
+                                AutoUpdater::global(cx)
+                                    .update(cx, |updater, cx| updater.check(true, cx))
+                            },
+                        ))
                     }),
             )
             .into_any_element()
@@ -4249,7 +4231,7 @@ impl HubView {
             .enumerate()
             .map(|(index, package)| {
                 let source = package.source.clone();
-                let label = format!("Updating {}", package.name);
+                let label = format!("正在更新 {}", package.name);
                 h_flex()
                     .gap(px(8.))
                     .child(
@@ -4266,7 +4248,7 @@ impl HubView {
                     .child(
                         Button::new(
                             ElementId::Name(format!("update-extension-{index}").into()),
-                            "Update",
+                            "更新",
                         )
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.run_pi_update(label.clone(), vec![source.clone()], cx)
@@ -4278,7 +4260,7 @@ impl HubView {
         let count = packages.len();
         self.update_popover_frame(cx)
             .child(
-                Label::new("Extension updates")
+                Label::new("扩展更新")
                     .size(LabelSize::Small)
                     .color(Color::Placeholder),
             )
@@ -4286,11 +4268,11 @@ impl HubView {
             .when(count > 1, |this| {
                 this.child(
                     h_flex().child(
-                        Button::new("update-all-extensions", format!("Update all {count}"))
+                        Button::new("update-all-extensions", format!("更新全部 {count} 个扩展"))
                             .style(ButtonStyle::Tinted(TintColor::Accent))
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.run_pi_update(
-                                    format!("Updating {count} extensions"),
+                                    format!("正在更新 {count} 个扩展"),
                                     vec!["--extensions".to_string()],
                                     cx,
                                 )
@@ -4354,12 +4336,12 @@ impl HubView {
                     ChatStatus::Busy => h_flex()
                         .gap(px(6.))
                         .child(Spinner::new().size(IconSize::XSmall).color(Color::Accent))
-                        .child(LoadingLabel::new("Working").size(LabelSize::Small)),
+                        .child(LoadingLabel::new("运行中").size(LabelSize::Small)),
                     ChatStatus::Ready => h_flex()
                         .gap(px(6.))
                         .child(Indicator::dot(Color::Success))
                         .child(
-                            Label::new("Ready")
+                            Label::new("就绪")
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
                         ),
@@ -4367,7 +4349,7 @@ impl HubView {
                         .gap(px(6.))
                         .child(Indicator::dot(Color::Error))
                         .child(
-                            Label::new("Stopped")
+                            Label::new("已停止")
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
                         ),
@@ -4375,7 +4357,7 @@ impl HubView {
                 (breadcrumb, Some(status))
             }
             None => (
-                Label::new("Pi GPUI")
+                Label::new("Pi GPUI 中文版")
                     .size(LabelSize::Small)
                     .color(Color::Placeholder)
                     .into_any_element(),
@@ -4384,7 +4366,7 @@ impl HubView {
         };
         let (breadcrumb, status) = if self.settings_page.is_some() {
             (
-                Label::new("Settings")
+                Label::new("设置")
                     .size(LabelSize::Small)
                     .weight(FontWeight::MEDIUM)
                     .color(text_color)
@@ -4503,7 +4485,7 @@ impl HubView {
                             this.child(
                                 IconButton::new("reload-sessions", IconName::Refresh)
                                     .loading(self.reloading_sessions)
-                                    .tooltip(Tooltip::with_keys("Reload all open sessions", "⌘⇧R"))
+                                    .tooltip(Tooltip::with_keys("重新加载所有已打开的会话", "⌘⇧R"))
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.reload_sessions(&ReloadSessions, window, cx)
                                     })),
@@ -4513,7 +4495,7 @@ impl HubView {
                     .when_some(self.active_chat.clone(), |this, chat| {
                         this.child(
                             IconButton::new("session-tree", IconName::ListTree)
-                                .tooltip(Tooltip::with_keys("Session tree", "⌘⇧T"))
+                                .tooltip(Tooltip::with_keys("会话树", "⌘⇧T"))
                                 .on_click(move |_, window, cx| {
                                     chat.update(cx, |chat, cx| chat.toggle_tree(window, cx))
                                 }),
@@ -4531,9 +4513,9 @@ impl HubView {
                         )
                         .tooltip(Tooltip::with_keys(
                             if expanded {
-                                "Collapse step details"
+                                "折叠步骤详情"
                             } else {
-                                "Expand step details"
+                                "展开步骤详情"
                             },
                             "⌘⇧E",
                         ))
@@ -4546,7 +4528,7 @@ impl HubView {
                         this.child(
                             IconButton::new("app-menu", IconName::Ellipsis)
                                 .toggle_state(self.app_menu.is_some())
-                                .tooltip(Tooltip::text("Settings and more"))
+                                .tooltip(Tooltip::text("设置及其他选项"))
                                 .on_click(cx.listener(|this, event: &ClickEvent, _, cx| {
                                     // Below the button, right edges roughly aligned.
                                     let click = event.position();
@@ -4567,13 +4549,8 @@ impl HubView {
             return None;
         }
         let (id, icon, title, keys) = match side {
-            DockSide::Left => ("toggle-left-dock", IconName::PanelLeft, "Left panel", "⌘B"),
-            DockSide::Right => (
-                "toggle-right-dock",
-                IconName::PanelRight,
-                "Right panel",
-                "⌘R",
-            ),
+            DockSide::Left => ("toggle-left-dock", IconName::PanelLeft, "左侧面板", "⌘B"),
+            DockSide::Right => ("toggle-right-dock", IconName::PanelRight, "右侧面板", "⌘R"),
         };
         Some(
             IconButton::new(id, icon)
@@ -4596,17 +4573,17 @@ impl HubView {
                     .gap(px(6.))
                     .child(Spinner::new().size(IconSize::XSmall).color(Color::Muted))
                     .child(
-                        Label::new(format!("Downloading {version}"))
+                        Label::new(format!("正在下载 {version}"))
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
                     )
                     .into_any_element(),
             ),
             UpdateStatus::Ready(version) => Some(
-                Button::new("restart-to-update", "Restart to update")
+                Button::new("restart-to-update", "重启并更新")
                     .icon(IconName::Refresh)
                     .style(ButtonStyle::Tinted(TintColor::Accent))
-                    .tooltip(Tooltip::text(format!("Pi GPUI {version} is downloaded")))
+                    .tooltip(Tooltip::text(format!("已下载 Pi GPUI {version}")))
                     .on_click(cx.listener(|this, _, window, cx| this.restart_to_update(window, cx)))
                     .into_any_element(),
             ),
@@ -4632,9 +4609,9 @@ impl HubView {
             )
             .child(
                 Label::new(if no_workspaces {
-                    "Add a project folder to get started"
+                    "添加一个项目文件夹，开始使用"
                 } else {
-                    "Pick a session on the left or start a new one"
+                    "在左侧选择一个会话，或新建会话"
                 })
                 .color(Color::Muted),
             )
@@ -4642,7 +4619,7 @@ impl HubView {
                 h_flex()
                     .gap(px(8.))
                     .child(
-                        Button::new("placeholder-add-workspace", "Add project")
+                        Button::new("placeholder-add-workspace", "添加项目")
                             .icon(IconName::Plus)
                             .style(ButtonStyle::Filled)
                             .size(ButtonSize::Medium)
@@ -4655,7 +4632,7 @@ impl HubView {
                 h_flex()
                     .gap(px(6.))
                     .child(
-                        Label::new("New session")
+                        Label::new("新建会话")
                             .size(LabelSize::Small)
                             .color(Color::Placeholder),
                     )
@@ -4713,7 +4690,7 @@ impl Render for HubView {
                 .child(
                     IconButton::new("dismiss-notice", IconName::Close)
                         .icon_size(IconSize::XSmall)
-                        .tooltip(Tooltip::text("Dismiss"))
+                        .tooltip(Tooltip::text("关闭提示"))
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.notice = None;
                             cx.notify();
@@ -4863,7 +4840,7 @@ fn render_window_controls(window: &Window) -> Option<AnyElement> {
             .when(controls.minimize, |this| {
                 this.child(
                     IconButton::new("window-minimize", IconName::Dash)
-                        .tooltip(Tooltip::text("Minimize"))
+                        .tooltip(Tooltip::text("最小化"))
                         .on_click(|_, window, _| window.minimize_window()),
                 )
             })
@@ -4878,16 +4855,16 @@ fn render_window_controls(window: &Window) -> Option<AnyElement> {
                         },
                     )
                     .tooltip(Tooltip::text(if maximized {
-                        "Restore"
+                        "还原"
                     } else {
-                        "Maximize"
+                        "最大化"
                     }))
                     .on_click(|_, window, _| window.zoom_window()),
                 )
             })
             .child(
                 IconButton::new("window-close", IconName::Close)
-                    .tooltip(Tooltip::text("Close"))
+                    .tooltip(Tooltip::text("关闭"))
                     .on_click(|_, window, _| window.remove_window()),
             )
             .into_any_element(),

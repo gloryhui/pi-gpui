@@ -16,7 +16,7 @@
 use super::*;
 
 pub(super) const DIALOG_CONTEXT: &str = "ChatDialog";
-const ANSWER_PLACEHOLDER: &str = "Type your answer. Enter sends it, Esc cancels.";
+const ANSWER_PLACEHOLDER: &str = "输入回答。按 Enter 发送，按 Esc 取消。";
 /// ask_user_question marks its free-text choice with this prefix.
 const FREE_TEXT_PREFIX: &str = "✎";
 
@@ -225,7 +225,7 @@ impl ChatView {
         response["id"] = json!(id);
         let result = match &self.connection {
             Connection::Ready(process) => process.send(response),
-            _ => Err("pi is not connected".to_string()),
+            _ => Err("pi 未连接".to_string()),
         };
         if let Err(error) = result {
             self.push_notice(Tone::Error, error);
@@ -542,15 +542,20 @@ impl ChatView {
         let body: AnyElement = match &row.state {
             DialogState::Pending if pending && !row.kind.uses_composer() => {
                 let choices = row.kind.choices();
+                let display_choice = |choice: &str| match (&row.kind, choice) {
+                    (DialogKind::Confirm(_), "Yes") => "是".to_string(),
+                    (DialogKind::Confirm(_), "No") => "否".to_string(),
+                    _ => choice.to_string(),
+                };
                 let numbered = matches!(row.kind, DialogKind::Confirm(_));
                 v_flex()
                     .gap(px(2.))
                     .children(choices.into_iter().enumerate().map(|(position, choice)| {
                         let (label, description) = match choice.split_once(" — ") {
                             Some((label, description)) => {
-                                (label.to_string(), Some(description.to_string()))
+                                (display_choice(label), Some(description.to_string()))
                             }
-                            None => (choice.clone(), None),
+                            None => (display_choice(&choice), None),
                         };
                         let active = position == highlight;
                         h_flex()
@@ -593,7 +598,7 @@ impl ChatView {
                         .color(Color::Accent),
                 )
                 .child(
-                    Label::new("Answer in the message field below")
+                    Label::new("请在下方消息输入框中回答")
                         .size(LabelSize::Small)
                         .color(Color::Accent),
                 )
@@ -612,9 +617,13 @@ impl ChatView {
                     SelectableText::new(
                         key("dialog-answer"),
                         SharedString::from(if answer.is_empty() {
-                            "(empty answer)".to_string()
+                            "（空回答）".to_string()
                         } else {
-                            answer.clone()
+                            match (&row.kind, answer.as_str()) {
+                                (DialogKind::Confirm(_), "Yes") => "是".to_string(),
+                                (DialogKind::Confirm(_), "No") => "否".to_string(),
+                                _ => answer.clone(),
+                            }
                         }),
                         &self.selection,
                     )
@@ -623,9 +632,9 @@ impl ChatView {
                 .into_any_element(),
             DialogState::Cancelled | DialogState::Closed => {
                 Label::new(if row.state == DialogState::Cancelled {
-                    "Cancelled"
+                    "已取消"
                 } else {
-                    "No longer waiting for an answer"
+                    "已不再等待回答"
                 })
                 .size(LabelSize::Small)
                 .color(Color::Placeholder)
@@ -644,16 +653,15 @@ impl ChatView {
             h_flex()
                 .gap(px(12.))
                 .when(!row.kind.uses_composer(), |this| {
-                    this.child(hint("↑↓", "choose"))
-                        .child(hint("Enter", "answer"))
+                    this.child(hint("↑↓", "选择")).child(hint("Enter", "回答"))
                 })
                 .when(row.kind.uses_composer(), |this| {
-                    this.child(hint("Enter", "send"))
+                    this.child(hint("Enter", "发送"))
                 })
-                .child(hint("Esc", "cancel"))
+                .child(hint("Esc", "取消"))
                 .when(matches!(row.kind, DialogKind::Select(_)), |this| {
                     this.child(
-                        Label::new("or type the number or your own answer below")
+                        Label::new("或在下方输入序号或自定义回答")
                             .size(LabelSize::XSmall)
                             .color(Color::Placeholder),
                     )
@@ -681,10 +689,14 @@ impl ChatView {
                             .color(if pending { Color::Accent } else { Color::Muted }),
                     )
                     .child(
-                        Label::new(if pending { "pi is asking" } else { "pi asked" })
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .weight(FontWeight::MEDIUM),
+                        Label::new(if pending {
+                            "pi 正在提问"
+                        } else {
+                            "pi 的提问"
+                        })
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .weight(FontWeight::MEDIUM),
                     ),
             )
             .children(title)

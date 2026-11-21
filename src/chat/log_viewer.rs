@@ -173,39 +173,39 @@ impl ChatView {
         let row = viewer.row;
 
         let mut facts = vec![match status {
-            ToolStatus::Running => "running".to_string(),
-            ToolStatus::Done => "done".to_string(),
-            ToolStatus::Failed => "failed".to_string(),
+            ToolStatus::Running => "运行中".to_string(),
+            ToolStatus::Done => "已完成".to_string(),
+            ToolStatus::Failed => "失败".to_string(),
         }];
         match (running, log.started, log.duration_ms) {
-            (true, Some(started), _) => facts.push(format!("{} s", started.elapsed().as_secs())),
+            (true, Some(started), _) => facts.push(format!("{} 秒", started.elapsed().as_secs())),
             (false, _, Some(ms)) => facts.push(format_duration(ms)),
             _ => {}
         }
         facts.push(match viewer.lines.len() {
-            1 => "1 line".to_string(),
-            count => format!("{count} lines"),
+            1 => "1 行".to_string(),
+            count => format!("{count} 行"),
         });
 
         // Where the text shown comes from, when it is not everything.
         let note = if viewer.loading {
-            Some("Loading the full log…".to_string())
+            Some("正在加载完整日志…".to_string())
         } else if let Some(error) = &viewer.error {
             Some(format!(
-                "The full log is gone ({error}); this is what pi reported."
+                "完整日志已不存在（{error}）；以下为 pi 报告的内容。"
             ))
         } else if viewer.cut_bytes > 0 {
             Some(format!(
-                "Showing the last 16 MB; {} MB more are in the log file.",
+                "当前显示最后 16 MB；日志文件中另有 {} MB。",
                 viewer.cut_bytes >> 20
             ))
         } else if running && log.file.is_some() {
             Some(
-                "Live: the newest output (pi sends up to 2,000 lines or 50 KB). The full log opens here when the command ends."
+                "实时输出：显示最新内容（pi 最多发送 2,000 行或 50 KB）。命令结束后可在此打开完整日志。"
                     .to_string(),
             )
         } else if !running && viewer.source.is_some() && log.text.contains("Full output: ") {
-            Some("pi cut this output, and its full log file is gone.".to_string())
+            Some("pi 截断了此输出，完整日志文件也不存在。".to_string())
         } else {
             None
         };
@@ -217,9 +217,9 @@ impl ChatView {
                 .py(px(40.))
                 .child(
                     Label::new(if running {
-                        "No output yet…"
+                        "暂无输出…"
                     } else {
-                        "No output."
+                        "没有输出。"
                     })
                     .size(LabelSize::Small)
                     .color(Color::Placeholder),
@@ -338,7 +338,7 @@ impl ChatView {
                                     IconButton::new("log-copy", IconName::Copy)
                                         .size(ButtonSize::Compact)
                                         .icon_size(IconSize::XSmall)
-                                        .tooltip(Tooltip::text("Copy the log"))
+                                        .tooltip(Tooltip::text("复制日志"))
                                         .on_click(move |_, _, cx| {
                                             cx.write_to_clipboard(gpui::ClipboardItem::new_string(
                                                 copy_text.to_string(),
@@ -349,7 +349,7 @@ impl ChatView {
                                     IconButton::new("log-open", IconName::File)
                                         .size(ButtonSize::Compact)
                                         .icon_size(IconSize::XSmall)
-                                        .tooltip(Tooltip::text("Open in editor"))
+                                        .tooltip(Tooltip::text("在编辑器中打开"))
                                         .on_click(move |_, _, _| {
                                             open_log_in_editor(file.as_deref(), &editor_text)
                                         }),
@@ -358,7 +358,7 @@ impl ChatView {
                                     IconButton::new("log-close", IconName::Close)
                                         .size(ButtonSize::Compact)
                                         .icon_size(IconSize::XSmall)
-                                        .tooltip(Tooltip::with_keys("Close", "Esc"))
+                                        .tooltip(Tooltip::with_keys("关闭", "Esc"))
                                         .on_click(cx.listener(|this, _, window, cx| {
                                             this.close_log(window, cx)
                                         })),
@@ -423,6 +423,6 @@ fn open_log_in_editor(file: Option<&Path>, text: &str) {
     ));
     match std::fs::write(&path, text) {
         Ok(()) => crate::platform::open_in_editor(&path),
-        Err(error) => eprintln!("pi-gpui: could not write {}: {error}", path.display()),
+        Err(error) => eprintln!("pi-gpui: 无法写入 {}：{error}", path.display()),
     }
 }

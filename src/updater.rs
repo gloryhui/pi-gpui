@@ -157,9 +157,7 @@ impl AutoUpdater {
         let Some(bundle) = self.bundle.clone() else {
             if manual {
                 self.report(
-                    UpdateStatus::Failed(
-                        "updates work in the installed app, not in a development build".to_string(),
-                    ),
+                    UpdateStatus::Failed("此版本需重新构建才能更新。".to_string()),
                     cx,
                 );
             }
@@ -565,8 +563,11 @@ fn running_bundle() -> Option<PathBuf> {
     }
     let contents = executable.parent()?.parent()?;
     let bundle = contents.parent()?;
-    (contents.file_name()? == "Contents" && bundle.extension()? == "app")
-        .then(|| bundle.to_path_buf())
+    let plist = std::fs::read_to_string(contents.join("Info.plist")).ok()?;
+    (contents.file_name()? == "Contents"
+        && bundle.extension()? == "app"
+        && plist.contains(&format!("<string>{BUNDLE_ID}</string>")))
+    .then(|| bundle.to_path_buf())
 }
 
 /// Testing aid: `PI_GPUI_PRETEND_VERSION=1.4.0` makes the app believe it is

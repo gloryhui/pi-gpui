@@ -6,6 +6,27 @@
 
 use gpui::Window;
 
+#[cfg(target_os = "macos")]
+pub fn localize_window_menu() {
+    use objc::runtime::Object;
+    use objc::{class, msg_send, sel, sel_impl};
+
+    // GPUI 0.2.2 registers the menu with AppKit only when its title is "Window".
+    // SAFETY: Called on the main thread just after GPUI has installed the menus.
+    unsafe {
+        let app: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+        let windows: *mut Object = msg_send![app, windowsMenu];
+        let main: *mut Object = msg_send![app, mainMenu];
+        let old_title: *mut Object =
+            msg_send![class!(NSString), stringWithUTF8String: c"Window".as_ptr()];
+        let title: *mut Object =
+            msg_send![class!(NSString), stringWithUTF8String: c"窗口".as_ptr()];
+        let item: *mut Object = msg_send![main, itemWithTitle: old_title];
+        let _: () = msg_send![item, setTitle: title];
+        let _: () = msg_send![windows, setTitle: title];
+    }
+}
+
 /// Starts dragging the window from our custom title bar.
 ///
 /// Call it on the first mouse move after a mouse down in the title bar, like

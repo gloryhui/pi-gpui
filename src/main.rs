@@ -43,8 +43,6 @@ actions!(
 );
 
 fn main() {
-    #[cfg(target_os = "macos")]
-    migrate_data_directory();
     if matches!(std::env::args().nth(1).as_deref(), Some("--version" | "-V")) {
         println!("pi-gpui {}", env!("CARGO_PKG_VERSION"));
         return;
@@ -59,7 +57,7 @@ fn main() {
     // the link as the argument (resources/pi-gpui.desktop).
     let initial_link = std::env::args()
         .nth(1)
-        .filter(|argument| argument.starts_with("pi-gpui:"));
+        .filter(|argument| argument.starts_with("pi-gpui:") || argument.starts_with("pi-gpui-zh:"));
     let initial_workspace = std::env::args_os()
         .nth(1)
         .filter(|_| initial_link.is_none())
@@ -126,6 +124,8 @@ fn main() {
             updater::AutoUpdater::global(cx).update(cx, |updater, cx| updater.check(true, cx));
         });
         cx.set_menus(app_menus());
+        #[cfg(target_os = "macos")]
+        platform::localize_window_menu();
         cx.on_window_closed(|cx| {
             if cx.windows().is_empty() {
                 cx.quit();
@@ -138,7 +138,7 @@ fn main() {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             // Draw our own title bar; macOS keeps the traffic lights.
             titlebar: Some(TitlebarOptions {
-                title: Some("Pi GPUI".into()),
+                title: Some("Pi GPUI 中文版".into()),
                 appears_transparent: true,
                 traffic_light_position: Some(point(px(12.), px(11.))),
             }),
@@ -197,22 +197,6 @@ fn main() {
     });
 }
 
-/// The app was called "Pi GPU UI" before; keep its projects and settings.
-#[cfg(target_os = "macos")]
-fn migrate_data_directory() {
-    let Some(home) = sessions::home_directory() else {
-        return;
-    };
-    let support = home.join("Library/Application Support");
-    let (old, new) = (support.join("pi-gpu-ui"), support.join("pi-gpui"));
-    if old.is_dir()
-        && !new.exists()
-        && let Err(error) = std::fs::rename(&old, &new)
-    {
-        eprintln!("pi-gpui: could not move {}: {error}", old.display());
-    }
-}
-
 /// The macOS menu bar, laid out like Zed's.
 fn app_menus() -> Vec<Menu> {
     use crate::text_input::{Copy, Cut, Paste, Redo, SelectAll, Undo};
@@ -220,61 +204,66 @@ fn app_menus() -> Vec<Menu> {
         Menu {
             name: "Pi GPUI".into(),
             items: vec![
-                MenuItem::action("About Pi GPUI", About),
-                MenuItem::action("Check for Updates…", CheckForUpdates),
+                MenuItem::action("关于 Pi GPUI 中文版", About),
+                MenuItem::action("检查更新…", CheckForUpdates),
                 MenuItem::separator(),
-                MenuItem::action("Settings…", hub::OpenSettings),
+                MenuItem::action("设置…", hub::OpenSettings),
                 MenuItem::separator(),
-                MenuItem::os_submenu("Services", SystemMenuType::Services),
+                MenuItem::os_submenu("服务", SystemMenuType::Services),
                 MenuItem::separator(),
-                MenuItem::action("Hide Pi GPUI", Hide),
-                MenuItem::action("Hide Others", HideOthers),
-                MenuItem::action("Show All", ShowAll),
+                MenuItem::action("隐藏 Pi GPUI 中文版", Hide),
+                MenuItem::action("隐藏其他应用", HideOthers),
+                MenuItem::action("显示全部", ShowAll),
                 MenuItem::separator(),
-                MenuItem::action("Quit Pi GPUI", Quit),
+                MenuItem::action("退出 Pi GPUI 中文版", Quit),
             ],
         },
         Menu {
-            name: "File".into(),
+            name: "文件".into(),
             items: vec![
-                MenuItem::action("New Session", hub::NewChat),
-                MenuItem::action("Close Session", hub::CloseChat),
-                MenuItem::action("Reload All Sessions", hub::ReloadSessions),
-                MenuItem::action("Add Project…", hub::AddWorkspace),
+                MenuItem::action("新建会话", hub::NewChat),
+                MenuItem::action("关闭会话", hub::CloseChat),
+                MenuItem::action("重新加载所有会话", hub::ReloadSessions),
+                MenuItem::action("添加项目…", hub::AddWorkspace),
             ],
         },
         Menu {
-            name: "Edit".into(),
+            name: "编辑".into(),
             items: vec![
-                MenuItem::os_action("Undo", Undo, OsAction::Undo),
-                MenuItem::os_action("Redo", Redo, OsAction::Redo),
+                MenuItem::os_action("撤销", Undo, OsAction::Undo),
+                MenuItem::os_action("重做", Redo, OsAction::Redo),
                 MenuItem::separator(),
-                MenuItem::os_action("Cut", Cut, OsAction::Cut),
-                MenuItem::os_action("Copy", Copy, OsAction::Copy),
-                MenuItem::os_action("Paste", Paste, OsAction::Paste),
-                MenuItem::os_action("Select All", SelectAll, OsAction::SelectAll),
+                MenuItem::os_action("剪切", Cut, OsAction::Cut),
+                MenuItem::os_action("复制", Copy, OsAction::Copy),
+                MenuItem::os_action("粘贴", Paste, OsAction::Paste),
+                MenuItem::os_action("全选", SelectAll, OsAction::SelectAll),
             ],
         },
         Menu {
-            name: "View".into(),
+            name: "显示".into(),
             items: vec![
-                MenuItem::action("Left Panel", hub::ToggleLeftDock),
-                MenuItem::action("Right Panel", hub::ToggleRightDock),
-                MenuItem::action("Files", hub::ToggleFiles),
-                MenuItem::action("Changes", hub::ToggleChanges),
+                MenuItem::action("左侧面板", hub::ToggleLeftDock),
+                MenuItem::action("右侧面板", hub::ToggleRightDock),
+                MenuItem::action("文件", hub::ToggleFiles),
+                MenuItem::action("改动", hub::ToggleChanges),
                 MenuItem::separator(),
-                MenuItem::action("Session Tree", chat::ToggleTree),
-                MenuItem::action("Change Model", chat::ToggleModelPicker),
-                MenuItem::action("Expand or Collapse Step Details", hub::ToggleDetails),
+                MenuItem::action("会话树", chat::ToggleTree),
+                MenuItem::action("切换模型", chat::ToggleModelPicker),
+                MenuItem::action("展开或折叠步骤详情", hub::ToggleDetails),
                 MenuItem::separator(),
-                MenuItem::action("Enter Full Screen", hub::ToggleFullScreen),
+                MenuItem::action("进入全屏", hub::ToggleFullScreen),
             ],
         },
         Menu {
-            name: "Window".into(),
+            name: if cfg!(target_os = "macos") {
+                "Window"
+            } else {
+                "窗口"
+            }
+            .into(),
             items: vec![
-                MenuItem::action("Minimize", hub::Minimize),
-                MenuItem::action("Zoom", hub::Zoom),
+                MenuItem::action("最小化", hub::Minimize),
+                MenuItem::action("缩放", hub::Zoom),
             ],
         },
     ]

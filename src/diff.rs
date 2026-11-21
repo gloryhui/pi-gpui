@@ -54,11 +54,11 @@ impl FileStatus {
 
     fn description(self) -> &'static str {
         match self {
-            FileStatus::Modified => "Modified",
-            FileStatus::Added => "Added",
-            FileStatus::Deleted => "Deleted",
-            FileStatus::Renamed => "Renamed",
-            FileStatus::Untracked => "Untracked",
+            FileStatus::Modified => "已修改",
+            FileStatus::Added => "已添加",
+            FileStatus::Deleted => "已删除",
+            FileStatus::Renamed => "已重命名",
+            FileStatus::Untracked => "未跟踪",
         }
     }
 }
@@ -307,7 +307,7 @@ impl DiffPanel {
                 .px(px(28.))
                 .py(px(4.))
                 .child(
-                    Label::new("Binary file")
+                    Label::new("二进制文件")
                         .size(LabelSize::XSmall)
                         .color(Color::Placeholder),
                 )
@@ -318,7 +318,7 @@ impl DiffPanel {
                 .px(px(28.))
                 .py(px(4.))
                 .child(
-                    Label::new("No text changes")
+                    Label::new("没有文本改动")
                         .size(LabelSize::XSmall)
                         .color(Color::Placeholder),
                 )
@@ -411,22 +411,18 @@ impl Render for DiffPanel {
         self.animation.set_active(loading || self.refreshing, cx);
         let colors = cx.theme().colors.clone();
         let content = match &self.state {
-            State::NoProject => {
-                self.render_message("Open a session to see its project's changes.".into())
-            }
+            State::NoProject => self.render_message("打开会话后即可查看项目改动。".into()),
             State::Loading => h_flex()
                 .flex_1()
                 .justify_center()
                 .gap(px(8.))
                 .child(Spinner::new().size(IconSize::Small).color(Color::Muted))
-                .child(LoadingLabel::new("Reading git diff…").size(LabelSize::Small))
+                .child(LoadingLabel::new("正在读取 Git 改动…").size(LabelSize::Small))
                 .into_any_element(),
-            State::NotARepository => {
-                self.render_message("This project is not a git repository.".into())
-            }
+            State::NotARepository => self.render_message("此项目不是 Git 仓库。".into()),
             State::Failed(error) => self.render_message(format!("git diff failed: {error}")),
             State::Loaded(changes) if changes.files.is_empty() => {
-                self.render_message("No changes against HEAD.".into())
+                self.render_message("与 HEAD 相比没有改动。".into())
             }
             State::Loaded(changes) => {
                 let root = changes.root.clone();
@@ -459,7 +455,7 @@ impl Render for DiffPanel {
                     div().flex_1().min_w(px(0.)).child(
                         Label::new(
                             self.summary()
-                                .unwrap_or_else(|| "Working tree against HEAD".to_string()),
+                                .unwrap_or_else(|| "工作区与 HEAD 对比".to_string()),
                         )
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
@@ -471,7 +467,7 @@ impl Render for DiffPanel {
                         .size(ButtonSize::Compact)
                         .icon_size(IconSize::XSmall)
                         .loading(self.refreshing)
-                        .tooltip(Tooltip::text("Refresh"))
+                        .tooltip(Tooltip::text("刷新"))
                         .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
                 )
         });

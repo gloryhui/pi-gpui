@@ -93,10 +93,10 @@ impl ChatView {
                     .py(px(6.))
                     .border_t_1()
                     .border_color(colors.border_variant)
-                    .child(hint("↑↓", "Select"))
-                    .child(hint("Tab", "Complete"))
-                    .child(hint("Enter", "Run"))
-                    .child(hint("Esc", "Close")),
+                    .child(hint("↑↓", "选择"))
+                    .child(hint("Tab", "补全"))
+                    .child(hint("Enter", "运行"))
+                    .child(hint("Esc", "关闭")),
             )
             .into_any_element()
     }
@@ -110,14 +110,14 @@ impl ChatView {
                 .py(px(40.))
                 .gap(px(8.))
                 .child(Spinner::new().size(IconSize::Small).color(Color::Muted))
-                .child(LoadingLabel::new("Loading the session tree…").size(LabelSize::Small))
+                .child(LoadingLabel::new("正在加载会话树…").size(LabelSize::Small))
                 .into_any_element(),
             Some(lines) if lines.is_empty() => h_flex()
                 .flex_1()
                 .justify_center()
                 .py(px(40.))
                 .child(
-                    Label::new("Nothing here yet: send a message first.")
+                    Label::new("这里还没有内容，请先发送一条消息。")
                         .size(LabelSize::Small)
                         .color(Color::Placeholder),
                 )
@@ -141,17 +141,17 @@ impl ChatView {
             .filter(|line| line.gutter.last() == Some(&Gutter::Corner))
             .count();
         let subtitle = match branch_points {
-            0 => format!("{} entries, no branches", lines.len()),
-            1 => format!("{} entries, 1 branch point", lines.len()),
-            count => format!("{} entries, {count} branch points", lines.len()),
+            0 => format!("{} 个条目，无分支", lines.len()),
+            1 => format!("{} 个条目，1 个分支点", lines.len()),
+            count => format!("{} 个条目，{count} 个分支点", lines.len()),
         };
         let selected = lines.get(view.selected);
         let preview = selected.map(|line| {
             let (title, text) = match line.kind {
-                NodeKind::User => ("Your message", line.text.as_str()),
-                NodeKind::Assistant => ("Answer", line.text.as_str()),
-                NodeKind::Compaction => ("Compaction summary", line.text.as_str()),
-                NodeKind::BranchSummary => ("Branch summary", line.text.as_str()),
+                NodeKind::User => ("你的消息", line.text.as_str()),
+                NodeKind::Assistant => ("回答", line.text.as_str()),
+                NodeKind::Compaction => ("上下文压缩摘要", line.text.as_str()),
+                NodeKind::BranchSummary => ("分支摘要", line.text.as_str()),
             };
             v_flex()
                 .id("tree-preview")
@@ -220,7 +220,7 @@ impl ChatView {
                                     .size(IconSize::Small)
                                     .color(Color::Muted),
                             )
-                            .child(Label::new("Session tree").weight(FontWeight::MEDIUM))
+                            .child(Label::new("会话树").weight(FontWeight::MEDIUM))
                             .child(
                                 Label::new(subtitle)
                                     .size(LabelSize::Small)
@@ -241,14 +241,12 @@ impl ChatView {
                             .py(px(8.))
                             .border_t_1()
                             .border_color(colors.border_variant)
-                            .child(hint("↑↓", "Move"))
-                            .child(hint("←→", "Branches"))
-                            .child(hint("Enter", "Go here"))
-                            .child(hint("⌥Enter", "Go here, summarize the branch you leave"))
-                            .when(can_fork, |this| {
-                                this.child(hint("⌘Enter", "Fork into a new session"))
-                            })
-                            .child(hint("Esc", "Close")),
+                            .child(hint("↑↓", "移动"))
+                            .child(hint("←→", "切换分支"))
+                            .child(hint("Enter", "跳转到此处"))
+                            .child(hint("⌥Enter", "跳转到此处并总结离开的分支"))
+                            .when(can_fork, |this| this.child(hint("⌘Enter", "分叉到新会话")))
+                            .child(hint("Esc", "关闭")),
                     ),
             )
             .into_any_element()
@@ -286,9 +284,9 @@ impl ChatView {
         };
         let text = match line.kind {
             NodeKind::User | NodeKind::Assistant => sessions::one_line(&line.text, 200),
-            NodeKind::Compaction => "Context compacted".to_string(),
+            NodeKind::Compaction => "上下文已压缩".to_string(),
             NodeKind::BranchSummary => {
-                format!("Branch summary: {}", sessions::one_line(&line.text, 160))
+                format!("分支摘要：{}", sessions::one_line(&line.text, 160))
             }
         };
         let text_color = match (line.active, line.kind) {
@@ -324,7 +322,7 @@ impl ChatView {
             .when(line.kind == NodeKind::User, |this| {
                 this.child(
                     div().flex_none().mr(px(6.)).child(
-                        Label::new("You")
+                        Label::new("你")
                             .size(LabelSize::XSmall)
                             .color(if line.active {
                                 Color::Accent
@@ -366,7 +364,7 @@ impl ChatView {
                         .rounded(px(4.))
                         .bg(colors.info_background)
                         .child(
-                            Label::new("current")
+                            Label::new("当前")
                                 .size(LabelSize::XSmall)
                                 .color(Color::Accent),
                         ),
@@ -487,8 +485,8 @@ impl ChatView {
             .on_click(cx.listener(|this, _, _, cx| this.toggle_usage(cx)))
             .when(!self.usage_open, |this| {
                 this.tooltip(Tooltip::text(match stats.context_fraction() {
-                    Some(fraction) => format!("Context {:.0}% used", fraction * 100.),
-                    None => "Context usage".to_string(),
+                    Some(fraction) => format!("上下文已使用 {:.0}%", fraction * 100.),
+                    None => "上下文用量".to_string(),
                 }))
             })
             .child(ring);
@@ -551,27 +549,26 @@ impl ChatView {
         // Context window.
         let headline = match (stats.context_tokens, stats.context_window) {
             (Some(tokens), Some(window)) => format!(
-                "{:.0}% used · {} / {} tokens",
+                "已使用 {:.0}% · {} / {} tokens",
                 stats.context_fraction().unwrap_or(0.) * 100.,
                 format_tokens(tokens),
                 format_tokens(window)
             ),
-            (None, Some(window)) => format!(
-                "Known after the next answer · {} tokens",
-                format_tokens(window)
-            ),
-            _ => "Unknown for this model".to_string(),
+            (None, Some(window)) => {
+                format!("将在下一条回答后显示 · {} tokens", format_tokens(window))
+            }
+            _ => "此模型暂无数据".to_string(),
         };
         let compaction = match self.compact_at_fraction() {
-            Some(at) => format!("Compacts automatically at {:.0}%", at * 100.),
+            Some(at) => format!("达到 {:.0}% 时自动压缩", at * 100.),
             None if self.compaction_reserve.is_none() && stats.context_window.is_some() => {
-                "Automatic compaction is off".to_string()
+                "自动压缩已关闭".to_string()
             }
             None => String::new(),
         };
         sections.push(
             section(vec![
-                title("Context window"),
+                title("上下文窗口"),
                 Label::new(headline)
                     .weight(FontWeight::MEDIUM)
                     .into_any_element(),
@@ -594,35 +591,35 @@ impl ChatView {
             .and_then(usage::Turn::cached_fraction)
         {
             cache_rows.push(row(
-                "Last turn".into(),
-                format!("{:.0}% cached", fraction * 100.),
+                "上一轮".into(),
+                format!("{:.0}% 已缓存", fraction * 100.),
             ));
         }
         if let Some(left) = extra.cache_left(now) {
             cache_rows.push(row(
-                "Expires in".into(),
+                "剩余有效期".into(),
                 if left.is_zero() {
-                    "expired".to_string()
+                    "已过期".to_string()
                 } else {
                     usage::format_countdown(left)
                 },
             ));
         }
         if !cache_rows.is_empty() {
-            let mut children = vec![title("Prompt cache")];
+            let mut children = vec![title("提示词缓存")];
             children.extend(cache_rows);
             sections.push(section(children).into_any_element());
         }
 
         // Plan limits.
         if !extra.limits.is_empty() {
-            let mut children = vec![title("Plan limits")];
+            let mut children = vec![title("套餐限额")];
             for limit in &extra.limits {
                 let resets = limit
                     .resets_at
                     .map(|at| {
                         format!(
-                            "resets in {}",
+                            "{} 后重置",
                             usage::format_until(std::time::Duration::from_millis(
                                 at.saturating_sub(now)
                             ))
@@ -631,7 +628,7 @@ impl ChatView {
                     .unwrap_or_default();
                 children.push(row(
                     format!(
-                        "{:.0}% of {}",
+                        "已使用 {:.0}%：{}",
                         limit.used_percent,
                         usage::limit_name(limit.window_minutes)
                     ),
@@ -644,9 +641,9 @@ impl ChatView {
         // This session.
         sections.push(
             section(vec![
-                title("This session"),
+                title("此会话"),
                 row(
-                    "Input / Output".into(),
+                    "输入 / 输出".into(),
                     format!(
                         "{} / {}",
                         format_tokens(stats.input),
@@ -654,7 +651,7 @@ impl ChatView {
                     ),
                 ),
                 row(
-                    "Cache read / write".into(),
+                    "缓存读取 / 写入".into(),
                     format!(
                         "{} / {}",
                         format_tokens(stats.cache_read),
@@ -662,9 +659,9 @@ impl ChatView {
                     ),
                 ),
                 row(
-                    "Cost".into(),
+                    "费用".into(),
                     if extra.subscription {
-                        "Subscription".to_string()
+                        "订阅".to_string()
                     } else {
                         format!("${:.2}", stats.cost)
                     },

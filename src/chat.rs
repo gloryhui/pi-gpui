@@ -76,7 +76,7 @@ const KEY_CONTEXT: &str = "Chat";
 const MODEL_PICKER_CONTEXT: &str = "ModelPicker";
 const TREE_CONTEXT: &str = "SessionTree";
 const SLASH_CONTEXT: &str = "SlashMenu";
-const COMPOSER_PLACEHOLDER: &str = "Message pi…";
+const COMPOSER_PLACEHOLDER: &str = "给 pi 发消息…";
 /// Ignore the chip click that arrives right after a click outside closed the picker.
 const PICKER_REOPEN_GUARD: Duration = Duration::from_millis(250);
 /// Upper bound of pi records applied per UI update, so a burst cannot hold
@@ -639,7 +639,7 @@ impl ChatView {
                 }
                 _ => None,
             })
-            .unwrap_or_else(|| "New session".to_string())
+            .unwrap_or_else(|| "新会话".to_string())
     }
 
     /// Starts a fresh pi for the same session, so it picks up updated pi,
@@ -692,10 +692,9 @@ impl ChatView {
                 eprintln!(
                     "pi-gpui: started pi in {} ({})",
                     self.workspace.display(),
-                    self.session_file.as_deref().map_or_else(
-                        || "new session".to_string(),
-                        |file| file.display().to_string()
-                    )
+                    self.session_file
+                        .as_deref()
+                        .map_or_else(|| "新会话".to_string(), |file| file.display().to_string())
                 );
                 self.connection = Connection::Ready(process);
                 self._events_task =
@@ -716,7 +715,7 @@ impl ChatView {
             }
             Err(error) => {
                 let message = format!(
-                    "Could not start {}: {error}",
+                    "无法启动 {}：{error}",
                     self.installation.executable.display()
                 );
                 eprintln!("pi-gpui: {message}");
@@ -730,7 +729,7 @@ impl ChatView {
     /// Sends a command with a fresh request id and returns the id.
     fn send(&mut self, mut command: Value) -> Result<String, String> {
         let Connection::Ready(process) = &self.connection else {
-            return Err("pi is not connected".to_string());
+            return Err("pi 未连接".to_string());
         };
         self.next_request_id += 1;
         let id = format!("ui-{}", self.next_request_id);
@@ -836,7 +835,7 @@ impl ChatView {
                 }
                 JsonlMessage::Malformed(line) => self.push_notice(
                     Tone::Warning,
-                    format!("Unrecognized line from pi: {}", truncate_chars(&line, 300)),
+                    format!("无法识别 pi 返回的数据行：{}", truncate_chars(&line, 300)),
                 ),
                 JsonlMessage::Exited {
                     status,
@@ -889,7 +888,7 @@ impl ChatView {
                 self.finish_streaming(changed);
                 self.request_stats();
                 if record["aborted"].as_bool() == Some(true) {
-                    self.push_notice(Tone::Warning, "Run stopped.".into());
+                    self.push_notice(Tone::Warning, "运行已停止。".into());
                 }
             }
             "message_start" if record["message"]["role"] == "assistant" => {
@@ -1006,17 +1005,17 @@ impl ChatView {
             "auto_retry_start" => self.push_notice(
                 Tone::Warning,
                 format!(
-                    "Retry {}/{}: {}",
+                    "重试 {}/{}：{}",
                     record["attempt"],
                     record["maxAttempts"],
-                    record["errorMessage"].as_str().unwrap_or("provider error")
+                    record["errorMessage"].as_str().unwrap_or("提供商错误")
                 ),
             ),
             "auto_retry_end" if record["success"].as_bool() == Some(false) => self.push_notice(
                 Tone::Error,
                 record["finalError"]
                     .as_str()
-                    .unwrap_or("Retries did not help")
+                    .unwrap_or("重试未能解决问题")
                     .to_string(),
             ),
             "compaction_start" => {
@@ -1043,7 +1042,7 @@ impl ChatView {
                     SummaryState::Failed(
                         record["errorMessage"]
                             .as_str()
-                            .unwrap_or("Compaction failed")
+                            .unwrap_or("未知原因")
                             .to_string(),
                     )
                 };
@@ -1054,7 +1053,7 @@ impl ChatView {
             "extension_error" => self.push_notice(
                 Tone::Error,
                 format!(
-                    "Extension error in {}: {}",
+                    "扩展 {} 出错：{}",
                     record["extensionPath"].as_str().unwrap_or("?"),
                     record["error"].as_str().unwrap_or("?")
                 ),
@@ -1089,15 +1088,12 @@ impl ChatView {
             }
             if command == "compact" {
                 self.compacting = false;
-                let error = record["error"]
-                    .as_str()
-                    .unwrap_or("unknown error")
-                    .to_string();
+                let error = record["error"].as_str().unwrap_or("未知错误").to_string();
                 self.finish_summary(SummaryState::Failed(error), &Value::Null);
                 return;
             }
-            let error = record["error"].as_str().unwrap_or("unknown error");
-            self.push_notice(Tone::Error, format!("{command}: {error}"));
+            let error = record["error"].as_str().unwrap_or("未知错误");
+            self.push_notice(Tone::Error, format!("{command}：{error}"));
             return;
         }
         let data = &record["data"];
@@ -1199,7 +1195,7 @@ impl ChatView {
                     data["contextUsage"]["contextWindow"].as_u64(),
                 ) {
                     (Some(tokens), Some(window)) => format!(
-                        "Context: {} of {} ({}%).",
+                        "上下文：{} / {}（{}%）。",
                         format_tokens(tokens),
                         format_tokens(window),
                         data["contextUsage"]["percent"]
@@ -1207,13 +1203,13 @@ impl ChatView {
                             .unwrap_or_default()
                             .round()
                     ),
-                    _ => "Context: unknown until the next answer.".to_string(),
+                    _ => "上下文用量将在下一条回答后显示。".to_string(),
                 };
                 self.push_notice(
                     Tone::Info,
                     format!(
-                        "Session: {}\nMessages: {} from you, {} answers, {} tool calls.\nTokens: {} in, {} out, {} cache read.\nCost: ${:.2}.\n{context}",
-                        data["sessionFile"].as_str().unwrap_or("not saved yet"),
+                        "会话：{}\n消息：你发送了 {} 条，收到 {} 条回答，调用工具 {} 次。\nTokens：输入 {}，输出 {}，缓存读取 {}。\n费用：${:.2}。\n{context}",
+                        data["sessionFile"].as_str().unwrap_or("尚未保存"),
                         data["userMessages"],
                         data["assistantMessages"],
                         data["toolCalls"],
@@ -1227,13 +1223,13 @@ impl ChatView {
             "get_last_assistant_text" => match data["text"].as_str() {
                 Some(text) if !text.is_empty() => {
                     cx.write_to_clipboard(gpui::ClipboardItem::new_string(text.to_string()));
-                    self.push_notice(Tone::Info, "Copied the last answer.".to_string());
+                    self.push_notice(Tone::Info, "已复制最后一条回答。".to_string());
                 }
-                _ => self.push_notice(Tone::Info, "There is no answer to copy yet.".to_string()),
+                _ => self.push_notice(Tone::Info, "还没有可复制的回答。".to_string()),
             },
             "export_html" => {
                 if let Some(path) = data["path"].as_str() {
-                    self.push_notice(Tone::Info, format!("Exported to {path}"));
+                    self.push_notice(Tone::Info, format!("已导出到 {path}"));
                     cx.open_with_system(Path::new(path));
                 }
             }
@@ -1392,13 +1388,13 @@ impl ChatView {
                         self.push_notice(Tone::Error, error);
                     }
                 } else {
-                    self.push_notice(Tone::Info, "Wait until pi is idle, then clone.".to_string());
+                    self.push_notice(Tone::Info, "请等待 pi 空闲后再克隆。".to_string());
                 }
             }
             "model" => self.toggle_model_picker(&ToggleModelPicker, window, cx),
             "new" => cx.emit(ChatEvent::NewSession),
             "name" if arguments.is_empty() => {
-                self.push_notice(Tone::Info, "Usage: /name <new session name>".to_string())
+                self.push_notice(Tone::Info, "用法：/name <新会话名称>".to_string())
             }
             "name" => self.send_all([json!({ "type": "set_session_name", "name": arguments })]),
             "session" => {
@@ -1437,10 +1433,7 @@ impl ChatView {
             return;
         }
         if self.is_running() || self.loading_history {
-            self.push_notice(
-                Tone::Info,
-                "Wait until pi finishes, then compact.".to_string(),
-            );
+            self.push_notice(Tone::Info, "请等待 pi 完成后再压缩上下文。".to_string());
             return;
         }
         let mut command = json!({ "type": "compact" });
@@ -1659,14 +1652,11 @@ impl ChatView {
         }
         let previous_len = self.rows.len();
         if !self.can_fork() {
-            self.push_notice(
-                Tone::Info,
-                "Wait until pi is idle, then move in the tree.".to_string(),
-            );
+            self.push_notice(Tone::Info, "请等待 pi 空闲后再在会话树中移动。".to_string());
         } else if pi::bridge_extension().is_none() {
             self.push_notice(
                 Tone::Error,
-                "Moving in the tree needs the app's pi extension, which could not be written to the app data folder.".to_string(),
+                "在会话树中移动需要应用的 pi 扩展，但无法将其写入应用数据目录。".to_string(),
             );
         } else {
             let mut message = format!("/{} {}", pi::NAVIGATE_COMMAND, line.id);
@@ -1796,7 +1786,7 @@ impl ChatView {
         let Some(entry) = entry else {
             self.push_notice(
                 Tone::Error,
-                "Could not fork: pi does not list this message as a fork point.".to_string(),
+                "无法分叉：pi 未将此消息列为分叉点。".to_string(),
             );
             return;
         };
@@ -1813,10 +1803,7 @@ impl ChatView {
             return;
         };
         if data["cancelled"].as_bool() == Some(true) {
-            self.push_notice(
-                Tone::Warning,
-                "An extension cancelled the fork.".to_string(),
-            );
+            self.push_notice(Tone::Warning, "扩展已取消分叉。".to_string());
             return;
         }
         let text = data["text"].as_str().unwrap_or_default().to_string();
@@ -1875,7 +1862,7 @@ impl ChatView {
         {
             return;
         }
-        let filter = cx.new(|cx| TextInput::single_line("Search models…", cx));
+        let filter = cx.new(|cx| TextInput::single_line("搜索模型…", cx));
         let filter_subscription = cx.observe(&filter, |this, _, cx| {
             if let Some(picker) = &mut this.model_picker {
                 picker.highlighted = 0;
@@ -2086,9 +2073,8 @@ impl ChatView {
         self.close_dialog(dialog::DialogState::Closed, changed, cx);
         self.queued_dialog_answer = None;
         self.fail_plugin_calls(cx);
-        let status =
-            status.map_or_else(|| "unknown status".to_string(), |status| status.to_string());
-        let mut text = format!("pi exited ({status}).");
+        let status = status.map_or_else(|| "未知状态".to_string(), |status| status.to_string());
+        let mut text = format!("pi 已退出（{status}）。");
         let stderr_tail = stderr_tail.trim();
         if !stderr_tail.is_empty() {
             text.push('\n');
@@ -2110,22 +2096,22 @@ impl ChatView {
     /// What pi is doing right now, shown above the composer.
     fn activity(&self) -> Option<String> {
         if self.forking.is_some() {
-            return Some("Forking…".to_string());
+            return Some("正在分叉…".to_string());
         }
         if self.navigating.is_some() {
-            return Some("Moving in the session tree…".to_string());
+            return Some("正在会话树中移动…".to_string());
         }
         if self.compacting {
-            return Some("Compacting context…".to_string());
+            return Some("正在压缩上下文…".to_string());
         }
         if self.loading_history {
-            return Some("Loading history…".to_string());
+            return Some("正在加载历史记录…".to_string());
         }
         if !self.running {
-            return self.pending_prompt.then(|| "Sending…".to_string());
+            return self.pending_prompt.then(|| "正在发送…".to_string());
         }
         if self.dialog.is_some() {
-            return Some("Waiting for your answer…".to_string());
+            return Some("正在等待你的回答…".to_string());
         }
         let running_tool = self.rows.iter().rev().take(64).find_map(|row| match row {
             Row::Tool {
@@ -2136,17 +2122,17 @@ impl ChatView {
             _ => None,
         });
         if let Some(name) = running_tool {
-            return Some(format!("Running {name}…"));
+            return Some(format!("正在运行 {name}…"));
         }
         let streaming = self.active_assistant.and_then(|index| self.rows.get(index));
         Some(match streaming {
-            Some(Row::Assistant { text, .. }) if !text.is_empty() => "Writing…".to_string(),
+            Some(Row::Assistant { text, .. }) if !text.is_empty() => "正在撰写…".to_string(),
             Some(Row::Assistant { thinking, .. })
                 if thinking.iter().any(|block| !block.is_empty()) =>
             {
-                "Thinking…".to_string()
+                "正在思考…".to_string()
             }
-            _ => "Working…".to_string(),
+            _ => "正在处理…".to_string(),
         })
     }
 
@@ -2154,7 +2140,7 @@ impl ChatView {
         match (&self.model, &self.thinking_level) {
             (Some(model), Some(level)) => format!("{} · {level}", model.name),
             (Some(model), None) => model.name.to_string(),
-            _ => "Model".to_string(),
+            _ => "模型".to_string(),
         }
     }
 
@@ -2199,7 +2185,7 @@ impl ChatView {
                         .child(Label::new(message).size(LabelSize::Small))
                         .child(
                             h_flex().child(
-                                Button::new("restart-pi", "Restart pi")
+                                Button::new("restart-pi", "重启 pi")
                                     .icon(IconName::Refresh)
                                     .style(ButtonStyle::Filled)
                                     .on_click(cx.listener(|this, _, _, cx| this.start_process(cx))),
@@ -2256,7 +2242,7 @@ impl ChatView {
                                     .color(Color::Accent),
                             )
                             .child(
-                                Label::new("Steering message")
+                                Label::new("引导消息")
                                     .size(LabelSize::XSmall)
                                     .color(Color::Accent),
                             ),
@@ -2359,7 +2345,7 @@ impl ChatView {
                 let open = expanded.unwrap_or(default_open || (running && !output.is_empty()))
                     && has_details;
                 let timing = match (running, log.started, log.duration_ms) {
-                    (true, Some(started), _) => Some(format!("{} s", started.elapsed().as_secs())),
+                    (true, Some(started), _) => Some(format!("{} 秒", started.elapsed().as_secs())),
                     (false, _, Some(ms)) => Some(format_duration(ms)),
                     _ => None,
                 };
@@ -2368,7 +2354,11 @@ impl ChatView {
                         IconButton::new(("tool-log", index), IconName::Terminal)
                             .size(ButtonSize::Compact)
                             .icon_size(IconSize::XSmall)
-                            .tooltip(Tooltip::text(if running { "Live log" } else { "Full log" }))
+                            .tooltip(Tooltip::text(if running {
+                                "实时日志"
+                            } else {
+                                "完整日志"
+                            }))
                             .on_click(cx.listener(move |this, _, window, cx| {
                                 this.open_log(index, window, cx)
                             }))
@@ -2431,7 +2421,7 @@ impl ChatView {
                                 this.child(disclosure_button(
                                     ("tool-disclosure", index),
                                     open,
-                                    "output",
+                                    "输出",
                                     cx.listener(move |this, _, _, cx| this.toggle_tool(index, cx)),
                                 ))
                             }),
@@ -2473,13 +2463,13 @@ impl ChatView {
                 expanded,
             } => {
                 let headline = match (kind, state) {
-                    (SummaryKind::Branch, _) => "Summary of the branch you left".to_string(),
-                    (_, SummaryState::Running) => "Compacting context…".to_string(),
-                    (_, SummaryState::Done) => "Context compacted".to_string(),
-                    (_, SummaryState::Aborted) => "Compaction stopped".to_string(),
+                    (SummaryKind::Branch, _) => "已离开分支的摘要".to_string(),
+                    (_, SummaryState::Running) => "正在压缩上下文…".to_string(),
+                    (_, SummaryState::Done) => "上下文已压缩".to_string(),
+                    (_, SummaryState::Aborted) => "上下文压缩已停止".to_string(),
                     (_, SummaryState::Failed(error)) => {
                         let reason = error.strip_prefix("Compaction failed: ").unwrap_or(error);
-                        format!("Compaction failed: {reason}")
+                        format!("上下文压缩失败：{reason}")
                     }
                 };
                 let detail = match (tokens_before, tokens_after) {
@@ -2490,7 +2480,7 @@ impl ChatView {
                             format_tokens(*after)
                         )
                     }
-                    (Some(before), None) => format!("from {} tokens", format_tokens(*before)),
+                    (Some(before), None) => format!("原为 {} tokens", format_tokens(*before)),
                     _ => String::new(),
                 };
                 let icon = match state {
@@ -2555,7 +2545,7 @@ impl ChatView {
                                         this.child(disclosure_button(
                                             ("summary-disclosure", index),
                                             open,
-                                            "summary",
+                                            "摘要",
                                             cx.listener(move |this, _, _, cx| {
                                                 this.toggle_summary(index, cx)
                                             }),
@@ -2604,9 +2594,9 @@ impl ChatView {
             _ => None,
         };
         let fork_tooltip = if matches!(row, Row::User { .. }) {
-            "Fork from this message"
+            "从此消息分叉"
         } else {
-            "Fork after this turn"
+            "在此轮之后分叉"
         };
         div()
             .id(("row", index))
@@ -2732,7 +2722,7 @@ impl ChatView {
                     this.child(disclosure_button(
                         ("thought-disclosure", position),
                         open,
-                        "thought",
+                        "思考过程",
                         cx.listener(move |this, _, _, cx| this.toggle_thought(row, position, cx)),
                     ))
                 })
@@ -2824,14 +2814,14 @@ impl ChatView {
                 .px(px(10.))
                 .py(px(10.))
                 .child(Spinner::new().size(IconSize::XSmall))
-                .child(LoadingLabel::new("Loading models…").size(LabelSize::Small))
+                .child(LoadingLabel::new("正在加载模型…").size(LabelSize::Small))
                 .into_any_element()
         } else if rows.is_empty() {
             div()
                 .px(px(10.))
                 .py(px(10.))
                 .child(
-                    Label::new("No models match")
+                    Label::new("没有匹配的模型")
                         .size(LabelSize::Small)
                         .color(Color::Placeholder),
                 )
@@ -2888,7 +2878,7 @@ impl ChatView {
                         .border_color(colors.border_variant)
                         .child(
                             div().mr(px(4.)).child(
-                                Label::new("Thinking")
+                                Label::new("思考强度")
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             ),
@@ -2928,7 +2918,7 @@ impl ChatView {
             .on_click(cx.listener(|this, _, window, cx| {
                 this.toggle_model_picker(&ToggleModelPicker, window, cx)
             }))
-            .tooltip(Tooltip::with_keys("Change model", "⌘⇧M"))
+            .tooltip(Tooltip::with_keys("切换模型", "⌘⇧M"))
             .when(self.switching_model, |this| {
                 this.child(Spinner::new().size(IconSize::XSmall).color(Color::Accent))
             })
@@ -2993,7 +2983,7 @@ impl ChatView {
                     h_flex()
                         .gap(px(4.))
                         .child(
-                            Label::new("to stop")
+                            Label::new("停止")
                                 .size(LabelSize::XSmall)
                                 .color(Color::Placeholder),
                         )
@@ -3002,9 +2992,9 @@ impl ChatView {
             });
 
         let send_tooltip = if self.running {
-            "Steer the run"
+            "引导当前运行"
         } else {
-            "Send"
+            "发送"
         };
         let plugin_buttons: Vec<AnyElement> = {
             let registry = self.plugins.read(cx);
@@ -3046,7 +3036,7 @@ impl ChatView {
                         .style(ButtonStyle::Tinted(TintColor::Error))
                         .size(ButtonSize::Medium)
                         .icon_size(IconSize::XSmall)
-                        .tooltip(Tooltip::with_keys("Stop", "Esc"))
+                        .tooltip(Tooltip::with_keys("停止", "Esc"))
                         .on_click(cx.listener(|this, _, _, cx| this.request_abort(cx))),
                 )
             })
@@ -3130,7 +3120,7 @@ impl ChatView {
                                                     .disabled(!self.can_compact())
                                                     .loading(self.compacting)
                                                     .tooltip(Tooltip::with_keys(
-                                                        "Compact context",
+                                                        "压缩上下文",
                                                         "⌘⇧C",
                                                     ))
                                                     .on_click(cx.listener(
@@ -3165,7 +3155,7 @@ impl Render for ChatView {
                     .items_center()
                     .gap(px(10.))
                     .child(Spinner::new().size(IconSize::Large).color(Color::Muted))
-                    .child(LoadingLabel::new("Loading session history…")),
+                    .child(LoadingLabel::new("正在加载会话历史…")),
                 Connection::Ready(_) => v_flex()
                     .items_center()
                     .gap(px(8.))
@@ -3174,9 +3164,9 @@ impl Render for ChatView {
                             .size(IconSize::Large)
                             .color(Color::Placeholder),
                     )
-                    .child(Label::new("Ready").color(Color::Muted))
+                    .child(Label::new("就绪").color(Color::Muted))
                     .child(
-                        Label::new("Describe a task below. Enter sends it to pi.")
+                        Label::new("在下方描述任务，按 Enter 发送给 pi。")
                             .size(LabelSize::Small)
                             .color(Color::Placeholder),
                     ),
@@ -3310,13 +3300,10 @@ fn now_ms() -> i64 {
         .unwrap_or_default()
 }
 
-/// Local time of a Unix ms timestamp: "14:05" today, "12 Nov 14:05" on other
-/// days (with the year when it is not this one); `full` always gives the
-/// date with seconds.
+/// Local time of a Unix ms timestamp: "14:05" today, "11月12日 14:05" on
+/// other days (with the year when it is not this one); `full` always gives
+/// the date with seconds.
 fn format_time(at: i64, full: bool) -> String {
-    const MONTHS: [&str; 12] = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
     let local = |ms: i64| {
         let seconds = (ms / 1000) as libc::time_t;
         // SAFETY: localtime_r only writes into the struct we pass.
@@ -3329,17 +3316,17 @@ fn format_time(at: i64, full: bool) -> String {
     let tm = local(at);
     let today = local(now_ms());
     let time = format!("{:02}:{:02}", tm.tm_hour, tm.tm_min);
-    let month = MONTHS[tm.tm_mon.clamp(0, 11) as usize];
+    let month = tm.tm_mon.clamp(0, 11) + 1;
     let year = 1900 + tm.tm_year;
     if full {
-        return format!("{} {month} {year}, {time}:{:02}", tm.tm_mday, tm.tm_sec);
+        return format!("{year}年{month}月{}日 {time}:{:02}", tm.tm_mday, tm.tm_sec);
     }
     if (tm.tm_year, tm.tm_yday) == (today.tm_year, today.tm_yday) {
         time
     } else if tm.tm_year == today.tm_year {
-        format!("{} {month} {time}", tm.tm_mday)
+        format!("{month}月{}日 {time}", tm.tm_mday)
     } else {
-        format!("{} {month} {year} {time}", tm.tm_mday)
+        format!("{year}年{month}月{}日 {time}", tm.tm_mday)
     }
 }
 
@@ -3492,10 +3479,10 @@ fn stop_error(message: &Value) -> Option<String> {
         Some("error") => Some(
             message["errorMessage"]
                 .as_str()
-                .unwrap_or("Provider error")
+                .unwrap_or("提供商错误")
                 .to_string(),
         ),
-        Some("aborted") => Some("Response interrupted.".to_string()),
+        Some("aborted") => Some("回答已中断。".to_string()),
         _ => None,
     }
 }
@@ -3606,9 +3593,9 @@ fn disclosure_button(
     .size(ButtonSize::Compact)
     .icon_size(IconSize::XSmall)
     .tooltip(Tooltip::text(if open {
-        format!("Hide {what}")
+        format!("隐藏{what}")
     } else {
-        format!("Show {what}")
+        format!("显示{what}")
     }))
     .on_click(on_click)
 }
@@ -3720,7 +3707,7 @@ fn preview_lines(text: &str) -> String {
     );
     if lines.len() > TOOL_OUTPUT_PREVIEW_LINES {
         preview.push_str(&format!(
-            "\n… {} more lines",
+            "\n… 另有 {} 行",
             lines.len() - TOOL_OUTPUT_PREVIEW_LINES
         ));
     }
@@ -3739,7 +3726,7 @@ fn tail_lines(text: &str) -> String {
         None => tail,
     };
     if start > 0 {
-        format!("… {start} earlier lines\n{tail}")
+        format!("… 早先还有 {start} 行\n{tail}")
     } else {
         tail
     }
@@ -3749,12 +3736,12 @@ fn is_shell(tool: &str) -> bool {
     tool == "bash" || tool == "bash (manual)" || tool == "powershell"
 }
 
-/// "850 ms", "4.2 s", "3 m 05 s".
+/// "850 毫秒", "4.2 秒", "3 分 05 秒".
 fn format_duration(ms: u64) -> String {
     match ms {
-        0..1_000 => format!("{ms} ms"),
-        1_000..60_000 => format!("{:.1} s", ms as f64 / 1000.),
-        _ => format!("{} m {:02} s", ms / 60_000, ms / 1000 % 60),
+        0..1_000 => format!("{ms} 毫秒"),
+        1_000..60_000 => format!("{:.1} 秒", ms as f64 / 1000.),
+        _ => format!("{} 分 {:02} 秒", ms / 60_000, ms / 1000 % 60),
     }
 }
 
@@ -3772,16 +3759,16 @@ mod tests {
     fn tail_keeps_the_newest_lines() {
         let text: String = (1..=30).map(|line| format!("line {line}\n")).collect();
         let tail = tail_lines(&text);
-        assert!(tail.starts_with("… 18 earlier lines\nline 19"));
+        assert!(tail.starts_with("… 早先还有 18 行\nline 19"));
         assert!(tail.ends_with("line 30"));
         assert_eq!(tail_lines("one\ntwo"), "one\ntwo");
     }
 
     #[test]
     fn durations_read_naturally() {
-        assert_eq!(format_duration(850), "850 ms");
-        assert_eq!(format_duration(4_210), "4.2 s");
-        assert_eq!(format_duration(185_000), "3 m 05 s");
+        assert_eq!(format_duration(850), "850 毫秒");
+        assert_eq!(format_duration(4_210), "4.2 秒");
+        assert_eq!(format_duration(185_000), "3 分 05 秒");
     }
 
     use super::*;
@@ -3809,7 +3796,7 @@ mod tests {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(preview_lines(&long).ends_with("… 8 more lines"));
+        assert!(preview_lines(&long).ends_with("… 另有 8 行"));
     }
 
     #[test]

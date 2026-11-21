@@ -44,7 +44,7 @@ pub fn bind_keys(cx: &mut gpui::App) {
 }
 
 pub enum FilesEvent {
-    /// "Add to message": a path relative to the project.
+    /// "添加到消息": a path relative to the project.
     InsertPath(String),
 }
 
@@ -501,7 +501,7 @@ impl FilesPanel {
         let relative = self.relative_path(&menu.path);
         let open = (!is_dir).then(|| {
             let path = path.clone();
-            item("file-menu-open", IconName::File, "Open in editor").on_click(cx.listener(
+            item("file-menu-open", IconName::File, "在编辑器中打开").on_click(cx.listener(
                 move |this, _, _, cx| {
                     this.menu = None;
                     crate::hub::open_in_editor(&path);
@@ -511,7 +511,7 @@ impl FilesPanel {
         });
         let insert = {
             let relative = relative.clone();
-            item("file-menu-insert", IconName::Message, "Add to message").on_click(cx.listener(
+            item("file-menu-insert", IconName::Message, "添加到消息").on_click(cx.listener(
                 move |this, _, _, cx| {
                     this.menu = None;
                     cx.emit(FilesEvent::InsertPath(relative.clone()));
@@ -525,9 +525,9 @@ impl FilesPanel {
                 "file-menu-reveal",
                 IconName::FolderOpen,
                 if cfg!(target_os = "macos") {
-                    "Reveal in Finder"
+                    "在访达中显示"
                 } else {
-                    "Show in File Manager"
+                    "在文件管理器中显示"
                 },
             )
             .on_click(cx.listener(move |this, _, _, cx| {
@@ -536,13 +536,13 @@ impl FilesPanel {
                 cx.notify();
             }))
         };
-        let copy = item("file-menu-copy", IconName::Copy, "Copy relative path").on_click(
-            cx.listener(move |this, _, _, cx| {
+        let copy = item("file-menu-copy", IconName::Copy, "复制相对路径").on_click(cx.listener(
+            move |this, _, _, cx| {
                 this.menu = None;
                 cx.write_to_clipboard(gpui::ClipboardItem::new_string(relative.clone()));
                 cx.notify();
-            }),
-        );
+            },
+        ));
         deferred(
             anchored().position(menu.position).child(
                 v_flex()
@@ -590,9 +590,9 @@ impl Render for FilesPanel {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let content = if self.workspace.is_none() {
-            self.render_message("Open a session to see its project's files.".into())
+            self.render_message("打开会话后即可查看项目文件。".into())
         } else if let Some(error) = &self.error {
-            self.render_message(format!("Could not read the folder: {error}"))
+            self.render_message(format!("无法读取文件夹：{error}"))
         } else if self.rows.is_empty() && self.refreshing {
             h_flex()
                 .flex_1()
@@ -600,7 +600,7 @@ impl Render for FilesPanel {
                 .child(Spinner::new().size(IconSize::Small).color(Color::Muted))
                 .into_any_element()
         } else if self.rows.is_empty() {
-            self.render_message("This folder is empty.".into())
+            self.render_message("此文件夹为空。".into())
         } else {
             uniform_list(
                 "file-tree",
@@ -638,7 +638,7 @@ impl Render for FilesPanel {
                     IconButton::new("refresh-files", IconName::Refresh)
                         .size(ButtonSize::Compact)
                         .icon_size(IconSize::XSmall)
-                        .tooltip(Tooltip::text("Refresh"))
+                        .tooltip(Tooltip::text("刷新"))
                         .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
                 )
         });

@@ -264,7 +264,7 @@ impl ChatView {
                             },
                         )
                         .icon_size(IconSize::XSmall)
-                        .tooltip(Tooltip::text(if masked { "Show" } else { "Hide" }))
+                        .tooltip(Tooltip::text(if masked { "显示" } else { "隐藏" }))
                         .on_click(cx.listener({
                             let key = key.clone();
                             move |this, _, _, cx| this.toggle_prompt_mask(&key, cx)
@@ -326,7 +326,7 @@ impl ChatView {
                                 })),
                         )
                         .child(
-                            Button::new(("prompt-cancel", position), "Cancel")
+                            Button::new(("prompt-cancel", position), "取消")
                                 .size(ButtonSize::Medium)
                                 .on_click(cx.listener({
                                     let key = key.clone();
@@ -339,11 +339,11 @@ impl ChatView {
                 .child(
                     h_flex()
                         .gap(px(12.))
-                        .child(hint("Enter", "submit"))
-                        .child(hint("Esc", "cancel"))
+                        .child(hint("Enter", "提交"))
+                        .child(hint("Esc", "取消"))
                         .when(prompt.secret, |this| {
                             this.child(
-                                Label::new("Goes to the plugin, not to the model or the chat")
+                                Label::new("内容只发送给插件，不会发送给模型或进入聊天记录")
                                     .size(LabelSize::XSmall)
                                     .color(Color::Placeholder),
                             )

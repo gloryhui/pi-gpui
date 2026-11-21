@@ -60,11 +60,11 @@ impl ChatView {
             .is_some_and(|(focused, _)| focused == call_id);
 
         let hint = if !live {
-            "Playing in a newer message"
+            "正在更新的消息中播放"
         } else if focused {
-            "Esc to release the keyboard"
+            "按 Esc 释放键盘焦点"
         } else {
-            "Click to play"
+            "点击播放"
         };
         let screen = div()
             .relative()
@@ -98,7 +98,7 @@ impl ChatView {
                                 .gap(px(6.))
                                 .child(Spinner::new().size(IconSize::XSmall))
                                 .child(
-                                    Label::new(format!("Starting {}…", view.title))
+                                    Label::new(format!("正在启动 {}…", view.title))
                                         .size(LabelSize::Small)
                                         .color(Color::Muted),
                                 ),

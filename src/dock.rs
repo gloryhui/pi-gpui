@@ -30,9 +30,9 @@ impl PanelKind {
 
     pub fn title(self) -> &'static str {
         match self {
-            PanelKind::Sessions => "Projects",
-            PanelKind::Files => "Files",
-            PanelKind::Diff => "Changes",
+            PanelKind::Sessions => "项目",
+            PanelKind::Files => "文件",
+            PanelKind::Diff => "改动",
         }
     }
 

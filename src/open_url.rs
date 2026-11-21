@@ -11,7 +11,9 @@ pub struct OpenRequest {
 }
 
 pub fn parse(url: &str) -> Option<OpenRequest> {
-    let rest = url.strip_prefix("pi-gpui://open")?;
+    let rest = url
+        .strip_prefix("pi-gpui-zh://open")
+        .or_else(|| url.strip_prefix("pi-gpui://open"))?;
     let query = rest.trim_start_matches('/').strip_prefix('?').unwrap_or("");
     let mut workspace = None;
     let mut session = None;

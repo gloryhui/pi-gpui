@@ -163,14 +163,14 @@ pub(super) fn compaction_reserve(workspace: &Path, provider: &str, model: &str) 
     Some(overridden.or(ordinary).unwrap_or(DEFAULT_RESERVE_TOKENS))
 }
 
-/// "4 min", "3 hr 25 min", "3 d 16 h".
+/// "4 分钟", "3 小时 25 分", "3 天 16 小时".
 pub(super) fn format_until(duration: Duration) -> String {
     let minutes = duration.as_secs() / 60;
     match minutes {
-        0 => "under a minute".to_string(),
-        1..60 => format!("{minutes} min"),
-        60..1440 => format!("{} hr {} min", minutes / 60, minutes % 60),
-        _ => format!("{} d {} h", minutes / 1440, minutes / 60 % 24),
+        0 => "不到 1 分钟".to_string(),
+        1..60 => format!("{minutes} 分钟"),
+        60..1440 => format!("{} 小时 {} 分", minutes / 60, minutes % 60),
+        _ => format!("{} 天 {} 小时", minutes / 1440, minutes / 60 % 24),
     }
 }
 
@@ -189,13 +189,13 @@ pub(super) fn format_countdown(duration: Duration) -> String {
     }
 }
 
-/// "5-hour limit", "weekly limit".
+/// "5 小时限额", "每周限额".
 pub(super) fn limit_name(window_minutes: u64) -> String {
     match window_minutes {
-        10_080 => "weekly limit".to_string(),
-        1_440 => "daily limit".to_string(),
-        minutes if minutes % 60 == 0 => format!("{}-hour limit", minutes / 60),
-        minutes => format!("{minutes}-minute limit"),
+        10_080 => "每周限额".to_string(),
+        1_440 => "每日限额".to_string(),
+        minutes if minutes % 60 == 0 => format!("{} 小时限额", minutes / 60),
+        minutes => format!("{minutes} 分钟限额"),
     }
 }
 
@@ -240,14 +240,14 @@ mod tests {
         assert_eq!(format_countdown(Duration::from_secs(70)), "1:10");
         assert_eq!(
             format_until(Duration::from_secs(3 * 3600 + 25 * 60)),
-            "3 hr 25 min"
+            "3 小时 25 分"
         );
         assert_eq!(
             format_until(Duration::from_secs(3 * 86_400 + 16 * 3600)),
-            "3 d 16 h"
+            "3 天 16 小时"
         );
-        assert_eq!(limit_name(300), "5-hour limit");
-        assert_eq!(limit_name(10_080), "weekly limit");
+        assert_eq!(limit_name(300), "5 小时限额");
+        assert_eq!(limit_name(10_080), "每周限额");
     }
 
     #[test]

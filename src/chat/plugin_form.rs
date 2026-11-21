@@ -453,7 +453,7 @@ impl ChatView {
         let next_label: SharedString = if last {
             prompt.submit_label.clone()
         } else {
-            "Next".into()
+            "下一步".into()
         };
 
         v_flex()
@@ -533,7 +533,7 @@ impl ChatView {
                     .gap(px(6.))
                     .when(state.step > 0, |this| {
                         this.child(
-                            Button::new(("form-back", position), "Back")
+                            Button::new(("form-back", position), "上一步")
                                 .size(ButtonSize::Medium)
                                 .on_click(cx.listener({
                                     let key = key.clone();
@@ -552,7 +552,7 @@ impl ChatView {
                             })),
                     )
                     .child(
-                        Button::new(("form-cancel", position), "Cancel")
+                        Button::new(("form-cancel", position), "取消")
                             .size(ButtonSize::Medium)
                             .on_click(cx.listener({
                                 let key = key.clone();
@@ -565,13 +565,17 @@ impl ChatView {
                             .flex_none()
                             .gap(px(6.))
                             .when(!question.options.is_empty(), |this| {
-                                this.child(hint("↑↓", "move")).child(hint(
+                                this.child(hint("↑↓", "移动")).child(hint(
                                     "Space",
-                                    if question.multiple { "toggle" } else { "pick" },
+                                    if question.multiple {
+                                        "切换选择"
+                                    } else {
+                                        "选择"
+                                    },
                                 ))
                             })
-                            .child(hint("Enter", if last { "submit" } else { "next" }))
-                            .child(hint("Esc", "cancel")),
+                            .child(hint("Enter", if last { "提交" } else { "下一步" }))
+                            .child(hint("Esc", "取消")),
                     ),
             )
             .into_any_element()

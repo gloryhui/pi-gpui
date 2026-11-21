@@ -20,10 +20,10 @@ pub(super) enum Source {
 impl Source {
     pub(super) fn label(self) -> &'static str {
         match self {
-            Source::App => "app",
-            Source::Extension => "extension",
-            Source::Prompt => "prompt",
-            Source::Skill => "skill",
+            Source::App => "应用",
+            Source::Extension => "扩展",
+            Source::Prompt => "提示词",
+            Source::Skill => "技能",
         }
     }
 }
@@ -55,29 +55,19 @@ pub(super) fn builtin() -> Vec<SlashCommand> {
     vec![
         command(
             "compact",
-            "Summarize earlier history to free up context",
-            Some("[instructions]"),
+            "总结较早的历史记录以释放上下文",
+            Some("[说明]"),
             None,
         ),
-        command(
-            "tree",
-            "Browse the session tree and move to another point",
-            None,
-            Some("⌘⇧T"),
-        ),
-        command(
-            "fork",
-            "Fork a new session from one of your messages (opens the tree)",
-            None,
-            None,
-        ),
-        command("clone", "Copy this session into a new one", None, None),
-        command("model", "Switch the model", None, Some("⌘⇧M")),
-        command("new", "Start a new session", None, Some("⌘N")),
-        command("name", "Rename this session", Some("<name>"), None),
-        command("session", "Show session info, usage and cost", None, None),
-        command("copy", "Copy the last answer", None, None),
-        command("export", "Export the session to HTML", None, None),
+        command("tree", "浏览会话树并移动到其他位置", None, Some("⌘⇧T")),
+        command("fork", "从某条消息分叉出新会话（打开会话树）", None, None),
+        command("clone", "将会话复制为新会话", None, None),
+        command("model", "切换模型", None, Some("⌘⇧M")),
+        command("new", "开始新会话", None, Some("⌘N")),
+        command("name", "重命名此会话", Some("<名称>"), None),
+        command("session", "显示会话信息、用量和费用", None, None),
+        command("copy", "复制最后一条回答", None, None),
+        command("export", "将会话导出为 HTML", None, None),
     ]
 }
 

@@ -215,14 +215,13 @@ pub fn one_line(text: &str, limit: usize) -> String {
     }
 }
 
-/// "now", "5m", "3h", "2d".
 pub fn relative_age(modified: SystemTime) -> String {
     let seconds = modified.elapsed().map_or(0, |elapsed| elapsed.as_secs());
     match seconds {
-        0..60 => "now".to_string(),
-        60..3_600 => format!("{}m", seconds / 60),
-        3_600..86_400 => format!("{}h", seconds / 3_600),
-        _ => format!("{}d", seconds / 86_400),
+        0..60 => "刚刚".to_string(),
+        60..3_600 => format!("{} 分钟前", seconds / 60),
+        3_600..86_400 => format!("{} 小时前", seconds / 3_600),
+        _ => format!("{} 天前", seconds / 86_400),
     }
 }
 
@@ -242,11 +241,11 @@ pub fn home_directory() -> Option<PathBuf> {
 }
 
 /// The app's own files (settings, projects, plugins): `~/Library/Application
-/// Support/pi-gpui` on macOS, `$XDG_CONFIG_HOME/pi-gpui` (`~/.config/pi-gpui`)
+/// Support/pi-gpui-zh` on macOS, `$XDG_CONFIG_HOME/pi-gpui` (`~/.config/pi-gpui`)
 /// elsewhere.
 pub fn app_data_directory() -> Option<PathBuf> {
     if cfg!(target_os = "macos") {
-        return Some(home_directory()?.join("Library/Application Support/pi-gpui"));
+        return Some(home_directory()?.join("Library/Application Support/pi-gpui-zh"));
     }
     Some(xdg_directory("XDG_CONFIG_HOME", ".config")?.join("pi-gpui"))
 }
